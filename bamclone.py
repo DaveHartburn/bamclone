@@ -75,7 +75,6 @@ gradball.set_colorkey((0,0,0))
 class Ball(pygame.sprite.Sprite):
     def __init__(self, col):
         pygame.sprite.Sprite.__init__(self)
-        print("Init ball")
         self.colour=col
         self.image=ballImage[col]
         self.newBall=True           # Will change to false on first dock/entry ally is free
@@ -118,7 +117,16 @@ class Ball(pygame.sprite.Sprite):
                 whid=(xtile,ytile)
                 whdoc=wheels[whid].dockingpos[point]
                 if(self.direction=="S" and ypos>whdoc[1]):
-                    print("Dock")
+                    # Dock to the north
+                    self.dock(whid, point)
+                elif(self.direction=="N" and ypos<whdoc[1]):
+                    # Dock to the south
+                    self.dock(whid, point)
+                elif(self.direction=="E" and xpos>whdoc[0]):
+                    # Dock to the west
+                    self.dock(whid, point)
+                elif(self.direction=="W" and xpos<whdoc[0]):
+                    # Dock to the East
                     self.dock(whid, point)
             else:
                 #msg="Not on a wheel"
@@ -170,8 +178,8 @@ class Ball(pygame.sprite.Sprite):
                             if(checkSTopen(self.myTile)):
                                 self.direction="S"
                         elif(tiletype.endswith("L")):
-                            # We are on a corner
-                            self.otherEnd=findOtherEnd(tiletype, opposite[self.direction])
+                            # We are on a corner, change direction
+                            self.direction=LotherEnd(tiletype, opposite[self.direction])
                                 
                     # End of hitMiddle actions
             # End of 'not on a wheel'
@@ -194,7 +202,6 @@ class Ball(pygame.sprite.Sprite):
 
     def dock(self, whid, point):
         # Dock the ball in the wheel
-        print("Docking ball on wheel {} at point {}".format(whid, point))
         self.direction=point
         self.wheel=whid
         coord=wheels[whid].dockBall(self, point)
@@ -314,7 +321,6 @@ class Wheel(pygame.sprite.Sprite):
 
     def slotEmpty(self, d):
         # Is there a ball in slot d? True if empty, false if there is a ball
-        print("  Checking for ball in slot ",d)
         if(self.docked[d]==None):
             return True
         else:
@@ -322,8 +328,6 @@ class Wheel(pygame.sprite.Sprite):
         
     def dockBall(self, ball, point):
         # Dock the ball and return coordinates for docking point
-        print("  Received instruction to dock ball in "+point+" slot")
-        print(ball.colour)
         self.docked[point]=ball
         self.numDocked+=1
 
@@ -529,7 +533,7 @@ def loadLevel(l):
 # End of loadLevel
         
 def checkSTopen(tile):
-    print("Is south open?", tile)
+    # Check if a tile is open to the south - is the associated wheel slot free?
     r=southTs[tile].isOpen()
     return r
 
@@ -538,10 +542,14 @@ def nextBall():
     r=random.choice(list(BALLCOLS))
     return r
 
-def findOtherEnd(type, entry):
-    # Returns a tile's exit for an entry point
-    print("What is the other end?")
-    return 4
+def LotherEnd(type, entry):
+    # Returns the exit direction for a corner based on the entry
+    # String should be of the format 'xyL', check what the first two characters are
+    if(type[0]==entry):
+        r=type[1]
+    else:
+        r=type[0]
+    return r
 
 # Quit if we have an error
 def errorQuit(msg):

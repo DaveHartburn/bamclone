@@ -23,21 +23,18 @@ The following codes are used:
 
 To Do
 
-- [ ] Save to github
+- [X] Save to github
 - [X] Implement wheel graphic and class
     - [X] Rotate on click
 - [X] Drop on south T if wheel is open
 -   [X] Implement southT class
 -   [X] Link each south T to a wheel
-    - [ ] Use more complex level for fuller test
-  - [ ] Make sure it blocks when outlet has docked ball
-- [ ] Balls dock on open
-    - [X] North
-    - [ ] South
-    - [ ] East
-    - [ ] West
+    - [X] Use more complex level for fuller test
+  - [X] Make sure it blocks when outlet has docked ball
+- [X] Balls dock on open slot
 - [X] Balls rotate with wheel
 - [X] Rotating wheel opens south T again
+- [ ] Implement nextTile function and strip repeated code
 - [ ] Allow loading of other levels with a command line parameter (for testing)
 - [ ] Wheels 'blow' on all balls of the same colour
 - [ ] Launch balls from wheel
@@ -45,7 +42,7 @@ To Do
 - [ ] Balls explode on collision (in wheel)
 - [X] Middle detection going north
 - [X] Middle detection going south
-- [ ] Turn corners
+- [X] Turn corners
 - [ ] Bouncing of north dead end
 - [ ] Bouncing of south dead end
 - [X] Random new ball on docking 
@@ -60,3 +57,12 @@ To Do
 - [ ] Loading screen
 - [ ] Progression
 - [ ] Lives?
+
+Bugs
+----
+- Balls don't quit sit snug when docking, until rotated
+
+Check in notes
+--------------
+- Implemented corners
+- Balls dock from every direction

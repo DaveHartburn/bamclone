@@ -17,8 +17,11 @@ WINMARG = TILESIZE/3      # The margin around the tiles
 PWIDTH=TILESIZE/2.5     # Pipe width. Pipes and balls are based on this size
 WHSIZE=TILESIZE*0.9
 BALLSIZE=PWIDTH*0.7
+# Ball speed, rot steps and FPS control how fast the game flows. If you make the tiles smaller, you may
+# want to drop FPS or slow down the ball, as it will still cover the same amount of pixels as a larger tile
 BALLSPEED=3             # Number of pixels to move per cycle
 ROTSTEPS=10             # Number of steps to rotate the wheel in
+FPS = 120               # Game frames per second
 
 # Colours
 BG=(0,0,64)
@@ -32,11 +35,13 @@ BALLCOLS = {
     "Y":(255,255,0)
 }
 
-# List of what tiles have open, used to decide if a ball can flow
-openNorth=["V","NEL","NWL","W"]
-openEast=["H", "ST", "NEL", "SEL", "W"]
-openSouth=["V", "SEL", "SWL", "W"]
-openWest=["H", "ST", "NWL", "SWL", "W"]
+# List structure of what tiles have open, used to decide if a ball can flow
+openEnds={
+    "N":["V","NEL","NWL","W"],
+    "E":["H", "ST", "NEL", "SEL", "W"],
+    "S":["V", "SEL", "SWL", "W"],
+    "W":["H", "ST", "NWL", "SWL", "W"]
+}
 
 # Claculate the window size
 WIDTH=(TILESIZE*TILESX)+(WINMARG*2)
@@ -52,9 +57,6 @@ pygame.display.set_caption("Bamclone")
 pygame.font.init()
 clock = pygame.time.Clock()
 all_sprites = pygame.sprite.Group()
-
-# Game essentials
-FPS = 120            # Game frames per second
 
 # Load in time images
 tImg = tileImages(TILESIZE, PWIDTH)
@@ -116,16 +118,18 @@ class Ball(pygame.sprite.Sprite):
                 point=opposite[self.direction]
                 whid=(xtile,ytile)
                 whdoc=wheels[whid].dockingpos[point]
-                if(self.direction=="S" and ypos>whdoc[1]):
+                # Dock if we have passed the docking location in x or y, but if we are over half way
+                # then we are being released and should not immediately doc
+                if(self.direction=="S" and ypos>whdoc[1] and ypos<TILESIZE/2):
                     # Dock to the north
                     self.dock(whid, point)
-                elif(self.direction=="N" and ypos<whdoc[1]):
+                elif(self.direction=="N" and ypos<whdoc[1] and ypos>TILESIZE/2):
                     # Dock to the south
                     self.dock(whid, point)
-                elif(self.direction=="E" and xpos>whdoc[0]):
+                elif(self.direction=="E" and xpos>whdoc[0] and xpos<TILESIZE/2):
                     # Dock to the west
                     self.dock(whid, point)
-                elif(self.direction=="W" and xpos<whdoc[0]):
+                elif(self.direction=="W" and xpos<whdoc[0] and xpos>TILESIZE/2):
                     # Dock to the East
                     self.dock(whid, point)
             else:
@@ -140,7 +144,7 @@ class Ball(pygame.sprite.Sprite):
                     else:
                         # If the next tile doesn't have an open east, also bounce
                         nextTile=levelData[ytile][xtile-1]
-                        if not (nextTile in openEast):
+                        if not (nextTile in openEnds["E"]):
                             bounce=True
                     if(bounce):
                         self.direction="E"
@@ -152,7 +156,7 @@ class Ball(pygame.sprite.Sprite):
                     else:
                         # If the next tile doesn't have an open west, also bounce
                         nextTile=levelData[ytile][xtile+1]
-                        if not (nextTile in openWest):
+                        if not (nextTile in openEnds["W"]):
                             bounce=True
                     if(bounce):
                         self.direction="W"
@@ -202,21 +206,39 @@ class Ball(pygame.sprite.Sprite):
 
     def dock(self, whid, point):
         # Dock the ball in the wheel
+        #print("Docking ", point)
         self.direction=point
         self.wheel=whid
         coord=wheels[whid].dockBall(self, point)
-        self.setCoord(coord)
+        self.setCoord(coord, point)
         if(self.newBall):
             # This was a new ball, the top ally is now clear
             self.newBall=False
             launchNext()
 
-    def setCoord(self, coord):
+    def setCoord(self, coord, docPoint):
         # Set the coordinate or the ball.
         # Coord received will be center coords relative to the current tile
+        # docPoint will be the point of the wheel for a docked ball
         self.rect.centerx=coord[0]+WINMARG+self.myTile[0]*TILESIZE
         self.rect.centery=coord[1]+WINMARG+self.myTile[1]*TILESIZE
+        if(docPoint!=None):
+            self.direction=docPoint
 
+    def handleEvent(self,event):
+        if(self.rect.collidepoint(event.pos)):
+            #print("I was clicked ", self.colour)
+            if(self.wheel!=-1):
+                #print("  and I was docked in wheel {} point {}, lets go".format(self.wheel, self.direction))
+                # Check if I can launch in this direction
+                if(wheels[self.wheel].checkExit(self.direction)):
+                    # Yes, all clear
+                    wheels[self.wheel].undock(self.direction)
+                    # Remove from wheel
+                    self.wheel=-1
+                # else:
+                #     print("No valid exit that way....")
+    # End of handle event
 
 
 # End of Ball class
@@ -248,6 +270,22 @@ class Wheel(pygame.sprite.Sprite):
         self.rect.centery=WINMARG+TILESIZE*id[1]+TILESIZE/2
         self.rotlimit=math.pi/2         # 90 degrees in radians
         self.rotdelta=self.rotlimit/ROTSTEPS
+
+        # Determine which exits are valid and do not allow ball launch if not
+        # i.e. a wheel that goes to a southT or nowhere
+        self.validExit={"N":False,"E":False,"S":False,"W":False}
+        for d in self.validExit:
+            # print("  Wheel: Checking ", d)
+            nextTile=findNextTile(id, d)
+            #print(nextTile)
+            # If the end open?
+            if(nextTile!=None):
+                o=opposite[d]
+                if(nextTile["type"] in openEnds[o]):
+                    # Yes, exit is valid
+                    self.validExit[d]=True
+                    #print("    Valid exit in direction ", d)
+    # End of init
  
     def update(self):
         if(self.rotating):
@@ -295,22 +333,22 @@ class Wheel(pygame.sprite.Sprite):
         if(self.docked["N"]==None):
             pygame.draw.circle(img, pygame.SRCALPHA, self.dockingpos["N"], self.ballrad)
         else:
-            self.docked["N"].setCoord(self.dockingpos["N"])
+            self.docked["N"].setCoord(self.dockingpos["N"], "N")
 
         if(self.docked["E"]==None):
             pygame.draw.circle(img, pygame.SRCALPHA, self.dockingpos["E"], self.ballrad)
         else:
-            self.docked["E"].setCoord(self.dockingpos["E"])
+            self.docked["E"].setCoord(self.dockingpos["E"], "E")
 
         if(self.docked["S"]==None):
             pygame.draw.circle(img, pygame.SRCALPHA, self.dockingpos["S"], self.ballrad)
         else:
-            self.docked["S"].setCoord(self.dockingpos["S"])
+            self.docked["S"].setCoord(self.dockingpos["S"], "S")
 
         if(self.docked["W"]==None):
             pygame.draw.circle(img, pygame.SRCALPHA, self.dockingpos["W"], self.ballrad)
         else:
-            self.docked["W"].setCoord(self.dockingpos["W"])
+            self.docked["W"].setCoord(self.dockingpos["W"], "W")
         return img
 
     def handleEvent(self,event):
@@ -330,8 +368,22 @@ class Wheel(pygame.sprite.Sprite):
         # Dock the ball and return coordinates for docking point
         self.docked[point]=ball
         self.numDocked+=1
-
         return self.dockingOrig[point]
+    
+    def checkExit(self, point):
+        # Does this point contain a valid exit from the wheel?
+        return self.validExit[point]
+    
+    def undock(self, point):
+        # Ball has been launched, drop reference to it
+        self.docked[point]=None
+        self.image=self.imageGen()
+
+    def setInvalid(self, point):
+        # Mark an exit point as invalid
+        #print("Setting point {} on wheel {} as invalid".format(point, self.id))
+        self.validExit[point]=False
+
 # End of Wheel class
 
 class SouthT():
@@ -365,26 +417,22 @@ class SouthT():
                 exit="S"
             else:
                 # All tiles should have one entry and one exit. Build list of the open ends of types
-                openEnds=[]
-                if(type in openNorth):
-                    openEnds.append("N")
-                if(type in openEast):
-                    openEnds.append("E")
-                if(type in openSouth):
-                    openEnds.append("S")
-                if(type in openWest):
-                    openEnds.append("W")
-                if(len(openEnds)!=2):
-                    errorQuit("Problem, we found the wrong number of open ends ", openEnds)
+                myOpen=[]
+
+                for e in ["N", "E", "S", "W"]:
+                    if(type in openEnds[e]):
+                        myOpen.append(e)
+                if(len(myOpen)!=2):
+                    errorQuit("Problem, we found the wrong number of open ends ", myOpen)
                     foundWheel=2
                     break
                 # Which end do we look at?
-                if(openEnds[0]==entrydir):
+                if(myOpen[0]==entrydir):
                     # We have entered from this end
-                    exit=openEnds[1]
+                    exit=myOpen[1]
                 else:
                     # We have entered from the other end
-                    exit=openEnds[0]
+                    exit=myOpen[0]
             #print("Entry to current tile ({},{}) (a {}) from {}, exit to {}".format(tilex,tiley, type, entrydir, exit))
             # Find the coordinates of the next tile
             if(exit=="N"):
@@ -423,7 +471,9 @@ class SouthT():
                 stepCount+=1       
         # End of wheel while loop
         self.linkedWheel=(nextx,nexty)
+        #print("Linked southT {} to wheel {} entry point {}".format(self.id, self.linkedWheel, entrydir))
         self.wheelLoc=entrydir
+        wheels[self.linkedWheel].setInvalid(entrydir)
         #print("  Wheel found, linking ST to wheel {}, docking point {}".format(self.linkedWheel, self.wheelLoc))
     # End of init
 
@@ -526,10 +576,18 @@ def loadLevel(l):
             if(tname=="W"):
                 wheels[coord]=Wheel(coord)
                 all_sprites.add(wheels[coord])
-            elif(tname=="ST"):
-                southTs[coord]=SouthT(coord)
             x+=1
         y+=1
+    # Look for southTs in the top ally. Did not do this above as we need to set the associated wheel
+    # exits as invalid
+    y=0
+    x=0
+    for tname in levelData[0]:
+        coord=(x,y)
+        if(tname=="ST"):
+            southTs[coord]=SouthT(coord)
+        x+=1
+
 # End of loadLevel
         
 def checkSTopen(tile):
@@ -551,8 +609,8 @@ def LotherEnd(type, entry):
         r=type[0]
     return r
 
-# Quit if we have an error
 def errorQuit(msg):
+    # Quit if we have an error
     print(msg)
     pygame.quit()
     exit(1)
@@ -562,6 +620,31 @@ def launchNext():
     global nextCol
     all_sprites.add(Ball(nextCol))
     nextCol=nextBall()
+
+def findNextTile(coord, dir):
+    # Finds the next tile in a specified direction
+    # Returns None if there are no tiles (i.e. screen edge)
+    # or a dictionary of coord and type
+    x=coord[0]
+    y=coord[1]
+    if(dir=="N"):
+        y-=1
+    elif(dir=="E"):
+        x+=1
+    elif(dir=="S"):
+        y+=1
+    elif(dir=="W"):
+        x-=1
+    # Check limits
+    if(x<0 or y<0 or x==TILESX or y==TILESY):
+        return None
+    
+    rtn={'coord':(x, y),
+        'type': levelData[y][x]
+    }
+    return rtn
+# End of nextTile
+
 # ************* End of functions / Start of main code ******************
 
 # Generate images
@@ -598,7 +681,11 @@ while running:
                 wheels[w].handleEvent(event)
         elif(event.button==1):
             # Left click, did we click a ball?
-            print("Left click")
+            # print("Left click")
+            for s in all_sprites:
+                if(type(s).__name__=="Ball"):
+                    s.handleEvent(event)
+                
 
     
     # else:

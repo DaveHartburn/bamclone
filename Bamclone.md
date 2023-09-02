@@ -20,9 +20,46 @@ The following codes are used:
 - W       A wheel
 
 
+Classes and functions
+=====================
+
+class Ball:
+  __init__(self, col)
+  update(self)
+  dock(self, whid, point)   # Docks a ball in a wheel at point specified
+  setCoord(self, coord, docPoint)   # Called from wheel, sets the coordinates and point of wheel docked
+  handleEvent(self, event)          # Handle mouse clicks
+
+class Wheel:
+  __init__(self, id)
+  update(self)
+  imageGen(self)    # Generates it's image and sets the docking position of any docked balls
+  handleEvent(self, event)        # Handle mouse clicks
+  slotEmpty(self, d)      # Returns true or false, if there is a ball docked at point d
+  dockBall(self, ball, point)   # Dock the ball and return coordinates for docking point
+  checkExit(self, point)        # Does this point contain a valid exit from the wheel?
+  undock(self, point)           # Ball has been launched, drop reference to it
+  setInvalid(self, point)       # Mark an exit point as invalid
+
+class SouthT():
+  __init__(self, id)
+  isOpen(self)        # Return if the path is open / wheel at the end is free
+
+
+Global functions:
+  drawGameScreen()        # Draws the main game screen
+  genWheelImage()         # Creates the wheel image on startup
+  genBalls()              # Generate the ball images on startup
+  loadLevel(l)            # Load a level from file 'l'
+  checkSTopen()           # Checks if a tile is open to the south - is the associated wheel slot free?
+  nextBall()              # Pick a random colour for the next ball
+  LotherEnd(type, entry)  # Returns the exit direction for a corner based on the entry
+  errorQuit(msg)          # Quit if we have an error
+  launchNext()            # Launch the next ball and pick the one to come after
+  findNextTile(coord, dir)    # Finds the next tile in a specified direction
 
 To Do
-
+=====
 - [X] Save to github
 - [X] Implement wheel graphic and class
     - [X] Rotate on click
@@ -34,11 +71,11 @@ To Do
 - [X] Balls dock on open slot
 - [X] Balls rotate with wheel
 - [X] Rotating wheel opens south T again
-- [ ] Implement nextTile function and strip repeated code
+- [X] Implement nextTile function and strip repeated code
 - [ ] Allow loading of other levels with a command line parameter (for testing)
 - [ ] Wheels 'blow' on all balls of the same colour
-- [ ] Launch balls from wheel
--   [ ] Do not allow if there is an immediate dead end
+- [X] Launch balls from wheel
+-   [X] Do not allow if there is an immediate dead end
 - [ ] Balls explode on collision (in wheel)
 - [X] Middle detection going north
 - [X] Middle detection going south
@@ -57,12 +94,18 @@ To Do
 - [ ] Loading screen
 - [ ] Progression
 - [ ] Lives?
+- [ ] Game pause
+- [ ] Test changing tile sizes
 
 Bugs
 ----
 - Balls don't quit sit snug when docking, until rotated
+- Fixed: The docking location of a ball (self.direction) does not change as wheel is rotated
 
 Check in notes
 --------------
-- Implemented corners
-- Balls dock from every direction
+- Bug fix: The docking location of a ball (self.direction) does not change as wheel is rotated
+- Tidied up code:
+  - openNorth, OpenEast etc, is now a single structure allowing is to loop over if needed
+  - Implemented a findNextTile function to return the next tile and dropped repeated code
+- You can now launch balls from wheels from valid exits

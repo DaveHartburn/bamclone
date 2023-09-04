@@ -22,6 +22,17 @@ BALLSIZE=PWIDTH*0.7
 BALLSPEED=3             # Number of pixels to move per cycle
 ROTSTEPS=10             # Number of steps to rotate the wheel in
 FPS = 120               # Game frames per second
+EXPTIME = 200           # ms for the explosion to appear and the ball finally die
+
+# Explosion details
+EXP_PREFIX=os.path.join("sprites","expl_03_00")
+EXP_SUFFIX=".png"
+EXP_NO=23
+EXP_INTERVAL=EXPTIME/EXP_NO
+
+# Global game counters
+NUM_WHEELS=0        # Count of the number of wheels
+BLOWN_WHEELS=0      # Count the number of wheels blown
 
 # Colours
 BG=(0,0,64)
@@ -58,7 +69,7 @@ pygame.font.init()
 clock = pygame.time.Clock()
 all_sprites = pygame.sprite.Group()
 
-# Load in time images
+# Load in images
 tImg = tileImages(TILESIZE, PWIDTH)
 
 # Define the level array
@@ -72,6 +83,8 @@ opposite={"N":"S","E":"W","S":"N","W":"E"}
 # Load images
 gradball = pygame.image.load(os.path.join('sprites','300gradball.png')).convert()
 gradball.set_colorkey((0,0,0))
+blownIcon = pygame.image.load(os.path.join('sprites','blownCoin.png')).convert_alpha()
+blownIcon = pygame.transform.scale(blownIcon, (WHSIZE/8,WHSIZE/8))
 
 # ************* Game classes *******************
 class Ball(pygame.sprite.Sprite):
@@ -88,9 +101,13 @@ class Ball(pygame.sprite.Sprite):
         self.rect.centery=WINMARG+TILESIZE/2
         self.hitMiddle=False    # Track if we have been in the middle of the tile yet
         self.msg=""             # A persistant message which can be set, useful for debugging. Will print if changed on update
-
+        self.exploState=-1         # < 0 if we are not exploding
+        self.nextExplo=0        # What time do we change the explode graphic?
+        
     def update(self):
-        if(self.wheel==-1):
+        if(self.exploState>=0):
+            self.explode()
+        elif(self.wheel==-1):
             msg=""  # Blank debugging message if needed
             # What tile coord are we in, and what tile type is it?
             xtile=math.floor((self.rect.centerx-WINMARG)/TILESIZE)
@@ -240,6 +257,36 @@ class Ball(pygame.sprite.Sprite):
                 #     print("No valid exit that way....")
     # End of handle event
 
+    def explode(self):
+        # Start the explosion in motion or continue the explosion
+        if(self.exploState==-1):
+            # Explosion not started
+            self.exploState=EXP_NO
+            self.nextExplo=0
+        elif(self.exploState==0):
+            # Explosion effect finished
+            # If we are docked, undock
+            if(self.wheel!=-1):
+                wheels[self.wheel].undock(self.direction)
+            # And remove
+            self.kill()
+        else:
+            # Continue explosion
+            ctime=pygame.time.get_ticks()
+            if(ctime>self.nextExplo):
+                # This is the next explosion step
+                # Change the image
+                cx=self.rect.centerx
+                cy=self.rect.centery
+                self.image=explosion[self.exploState-1]
+                self.rect=self.image.get_rect()
+                # Centre the image
+                self.rect.centerx=cx
+                self.rect.centery=cy
+                # Update the timer
+                self.nextExplo=ctime+EXP_INTERVAL
+                # Drop the explosion counter
+                self.exploState-=1
 
 # End of Ball class
     
@@ -349,6 +396,10 @@ class Wheel(pygame.sprite.Sprite):
             pygame.draw.circle(img, pygame.SRCALPHA, self.dockingpos["W"], self.ballrad)
         else:
             self.docked["W"].setCoord(self.dockingpos["W"], "W")
+        if(self.blown):
+            r=img.get_rect()
+            b=blownIcon.get_rect()
+            img.blit(blownIcon,(r.centerx-b.width/2,r.centery-b.height/2))
         return img
 
     def handleEvent(self,event):
@@ -366,8 +417,36 @@ class Wheel(pygame.sprite.Sprite):
         
     def dockBall(self, ball, point):
         # Dock the ball and return coordinates for docking point
-        self.docked[point]=ball
-        self.numDocked+=1
+        global BLOWN_WHEELS
+        # Is there already another ball docked here?
+        if(self.docked[point]!=None):
+            # Yes, explode both
+            self.docked[point].explode()
+            ball.explode()
+            self.numDocked-=1
+        else:
+            self.docked[point]=ball
+            self.numDocked+=1
+        # Are we full?
+        if(self.numDocked==4):
+            # Yes
+            # What colour is north?
+            c=self.docked["N"].colour
+            sameCol=True
+            for p in self.docked:
+                # Is this the same colour? (North obviously will be)
+                if(self.docked[p].colour!=c):
+                    sameCol=False
+            if(sameCol==True):
+                # All the same colour, explode
+                for p in self.docked:
+                    self.docked[p].explode()
+                    # Has this already been blown?
+                    if(self.blown==False):
+                        self.blown=True
+                        BLOWN_WHEELS+=1
+                        # Game over is tracked in main game loop
+
         return self.dockingOrig[point]
     
     def checkExit(self, point):
@@ -378,6 +457,7 @@ class Wheel(pygame.sprite.Sprite):
         # Ball has been launched, drop reference to it
         self.docked[point]=None
         self.image=self.imageGen()
+        self.numDocked-=1
 
     def setInvalid(self, point):
         # Mark an exit point as invalid
@@ -513,6 +593,7 @@ def drawGameScreen():
     all_sprites.draw(screen)
     # Cover up balls entering the screen
     pygame.draw.rect(screen, BG, [(WINMARG+TILESIZE*TILESX, WINMARG),(WINMARG,TILESIZE)])
+
     pygame.display.flip()
 # End of drawGameScreen()
 
@@ -540,13 +621,22 @@ def genBalls():
         bsurf.blit(bmaster, (0,0))
         blist[b]=bsurf
     return blist
-
-
 # End of genBalls
+
+def exploImages():
+    # Loads in the explosion images
+    imgList=[]
+    for i in range(0,EXP_NO):
+        imgFile=EXP_PREFIX+str(i+1).zfill(2)+EXP_SUFFIX
+        #print("Get image ", imgFile)
+        imgList.append(pygame.image.load(imgFile).convert_alpha())
+        imgList[i] = pygame.transform.scale(imgList[i], (BALLSIZE*2,BALLSIZE*2))
+
+    return imgList
 
 def loadLevel(l):
     # Loads the level from file
-    global levelData,wheels,southTs
+    global levelData,wheels,southTs, NUM_WHEELS
     levelData=[]
     fileName="level"+str(l)+".csv"
     print("Loading file", fileName)
@@ -576,6 +666,7 @@ def loadLevel(l):
             if(tname=="W"):
                 wheels[coord]=Wheel(coord)
                 all_sprites.add(wheels[coord])
+                NUM_WHEELS+=1
             x+=1
         y+=1
     # Look for southTs in the top ally. Did not do this above as we need to set the associated wheel
@@ -645,11 +736,19 @@ def findNextTile(coord, dir):
     return rtn
 # End of nextTile
 
+# Explode test
+def explodeTest():
+    # Test explode function, explode all balls, except the one in the top ally
+    for s in all_sprites:
+        if(type(s).__name__=="Ball"):
+            if(s.newBall==False):
+                s.explode()    
 # ************* End of functions / Start of main code ******************
 
 # Generate images
 wheelImage = genWheelImage()
 ballImage = genBalls()
+explosion = exploImages()
 
 loadLevel(1)
 
@@ -659,7 +758,7 @@ running = True
 # Add a ball to get us started
 nextCol=nextBall()
 all_sprites.add(Ball(nextCol))
-
+endTime=-1
 while running:
 
     # Keep loop running at the right speed
@@ -673,6 +772,8 @@ while running:
         if event.key == pygame.K_ESCAPE:
             running = False
             print("Escape - quitting")
+        if event.key == pygame.K_e:
+            explodeTest()
     elif event.type == pygame.MOUSEBUTTONDOWN:
         # Button 3, right click. Did we click a wheel?
         if(event.button==3):
@@ -696,6 +797,16 @@ while running:
 
     # Draw / render the scree
     drawGameScreen()
+
+    # Check to see if all wheels are blown
+    if(BLOWN_WHEELS==NUM_WHEELS):
+        # Delay for a little to finish the ball explode annimation
+        if(endTime==-1):
+            endTime=pygame.time.get_ticks()+EXPTIME+300
+        if(pygame.time.get_ticks()>endTime):
+            print("*** Level complete, well done! ***")
+            running=False
 # End of main loop
+print("Game over")
 
 pygame.quit()

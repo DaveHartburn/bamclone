@@ -1,6 +1,6 @@
 H,ST,H,H,H,H,ST,H
-B,V,H,H,H,H,W,W
-B,W,B,B,B,B,V,B
-B,W,H,H,H,H,W,B
+SEL,W,H,H,H,H,W,B
+V,V,B,B,B,B,V,B
+V,W,H,H,H,H,W,B
 B,NEL,H,W,W,H,NWL,B
 B,B,B,B,B,B,B,B

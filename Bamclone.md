@@ -29,6 +29,7 @@ class Ball:
   dock(self, whid, point)   # Docks a ball in a wheel at point specified
   setCoord(self, coord, docPoint)   # Called from wheel, sets the coordinates and point of wheel docked
   handleEvent(self, event)          # Handle mouse clicks
+  explode(self)                     # Start the explosion in motion or continue the explosion
 
 class Wheel:
   __init__(self, id)
@@ -50,6 +51,7 @@ Global functions:
   drawGameScreen()        # Draws the main game screen
   genWheelImage()         # Creates the wheel image on startup
   genBalls()              # Generate the ball images on startup
+  exploImages()           # Loads in the explosion images
   loadLevel(l)            # Load a level from file 'l'
   checkSTopen()           # Checks if a tile is open to the south - is the associated wheel slot free?
   nextBall()              # Pick a random colour for the next ball
@@ -57,6 +59,7 @@ Global functions:
   errorQuit(msg)          # Quit if we have an error
   launchNext()            # Launch the next ball and pick the one to come after
   findNextTile(coord, dir)    # Finds the next tile in a specified direction
+  explodeTest()           # Test explode function, explode all balls, except the one in the top ally
 
 To Do
 =====
@@ -73,10 +76,12 @@ To Do
 - [X] Rotating wheel opens south T again
 - [X] Implement nextTile function and strip repeated code
 - [ ] Allow loading of other levels with a command line parameter (for testing)
-- [ ] Wheels 'blow' on all balls of the same colour
+- [X] Wheels 'blow' on all balls of the same colour
+- [X] Game over, win on all blown
 - [X] Launch balls from wheel
 -   [X] Do not allow if there is an immediate dead end
-- [ ] Balls explode on collision (in wheel)
+- [X] Balls explode on collision (in wheel)
+  - [X] Test explode keypress
 - [X] Middle detection going north
 - [X] Middle detection going south
 - [X] Turn corners
@@ -94,18 +99,17 @@ To Do
 - [ ] Loading screen
 - [ ] Progression
 - [ ] Lives?
-- [ ] Game pause
+- [ ] Game pause (on screen button)
 - [ ] Test changing tile sizes
 
 Bugs
 ----
 - Balls don't quit sit snug when docking, until rotated
-- Fixed: The docking location of a ball (self.direction) does not change as wheel is rotated
+- Issues with random selection. The first two balls are always the same colour. The rest may follow a pattern
 
 Check in notes
 --------------
-- Bug fix: The docking location of a ball (self.direction) does not change as wheel is rotated
-- Tidied up code:
-  - openNorth, OpenEast etc, is now a single structure allowing is to loop over if needed
-  - Implemented a findNextTile function to return the next tile and dropped repeated code
-- You can now launch balls from wheels from valid exits
+- Added explode function and annimation
+- Balls explode on collision (in wheel)
+- Wheels 'blow' on all balls of the same colour
+- Game over, win on all blown

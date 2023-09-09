@@ -7,10 +7,16 @@ For development details, see bamclone.md
 
 Version
 -------
-0.1         * Basic level is playable.
-            * No timer, i.e. no lose condition
-            * Level complete - quits with command line message
-            * One wheel has south going dead end. Game will crash if taken
+0.2
+* Playable without timer
+* Fixed game crash issue listed in 0.1
+* Can load other levels with command line argument
+  
+0.1 
+* Basic level is playable.
+* No timer, i.e. no lose condition
+* Level complete - quits with command line message
+* One wheel has south going dead end. Game will crash if taken
 
 Credits
 =======

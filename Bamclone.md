@@ -59,6 +59,7 @@ Global functions:
   errorQuit(msg)          # Quit if we have an error
   launchNext()            # Launch the next ball and pick the one to come after
   findNextTile(coord, dir)    # Finds the next tile in a specified direction
+  isEndOpen(tile type)    # True if the end is open, false if not, None if tile doesn't exist
   explodeTest()           # Test explode function, explode all balls, except the one in the top ally
 
 To Do
@@ -75,7 +76,7 @@ To Do
 - [X] Balls rotate with wheel
 - [X] Rotating wheel opens south T again
 - [X] Implement nextTile function and strip repeated code
-- [ ] Allow loading of other levels with a command line parameter (for testing)
+- [X] Allow loading of other levels with a command line parameter (for testing)
 - [X] Wheels 'blow' on all balls of the same colour
 - [X] Game over, win on all blown
 - [X] Launch balls from wheel
@@ -85,8 +86,8 @@ To Do
 - [X] Middle detection going north
 - [X] Middle detection going south
 - [X] Turn corners
-- [ ] Bouncing of north dead end
-- [ ] Bouncing of south dead end
+- [X] Bouncing of north dead end
+- [X] Bouncing of south dead end
 - [X] Random new ball on docking 
 - [ ] Display new ball colour in advance
 - [ ] Level timer
@@ -96,20 +97,22 @@ To Do
 - [ ] Sound effects
 - [ ] More levels
 - [ ] Score
-- [ ] Loading screen
+- [ ] Lobby screen
 - [ ] Progression
 - [ ] Lives?
 - [ ] Game pause (on screen button)
 - [ ] Test changing tile sizes
+- [ ] Different tile colours/textures
 
 Bugs
 ----
 - Balls don't quit sit snug when docking, until rotated
 - Issues with random selection. The first two balls are always the same colour. The rest may follow a pattern
+- In testing one wheel didn't blow. Suspect a ball dropped as I turned that wheel and it became a 'ghost' somewhere
 
 Check in notes
 --------------
-- Added explode function and annimation
-- Balls explode on collision (in wheel)
-- Wheels 'blow' on all balls of the same colour
-- Game over, win on all blown
+- Allow loading of other levels with a command line parameter (for testing)
+- Can limit ball numbers (hard coded) for testing or more challenging levels
+- Improved code for bouncing off dead ends
+- Can bounce off north and south dead ends

@@ -5,12 +5,12 @@
 
 import pygame
 import csv, math, random
-import os
+import os, sys
 from tileImages import tileImages
 
 # Constants
 # =========
-TILESIZE = 140          # The size of individual tiles
+TILESIZE = 120          # The size of individual tiles
 TILESX = 8              # Number of tiles across the X
 TILESY = 6               # Number of tiles across the y
 WINMARG = TILESIZE/3      # The margin around the tiles
@@ -23,6 +23,8 @@ BALLSPEED=3             # Number of pixels to move per cycle
 ROTSTEPS=10             # Number of steps to rotate the wheel in
 FPS = 120               # Game frames per second
 EXPTIME = 200           # ms for the explosion to appear and the ball finally die
+BALL_LIMIT = -1          # -1 for infinite balls. May set a limit for testing or an extra challenge
+ballCount = 0           # Track the number of balls released
 
 # Explosion details
 EXP_PREFIX=os.path.join("sprites","expl_03_00")
@@ -58,6 +60,14 @@ openEnds={
 WIDTH=(TILESIZE*TILESX)+(WINMARG*2)
 HEIGHT=(TILESIZE*TILESY)+(WINMARG*2)
 origin=(WINMARG, WINMARG)
+
+# Default level name
+levelFile=os.path.join("levels","level1.csv")
+# Process command line arguments
+# Basic - If a second argument is supplied, assume this is the path to a level file
+if(len(sys.argv)>1):
+    levelFile=sys.argv[1]
+
 
 
 # Start pygame
@@ -152,38 +162,29 @@ class Ball(pygame.sprite.Sprite):
             else:
                 #msg="Not on a wheel"
                 bounce=False
+                atEdge=False
                 # Are we at the tile edge?
                 if(self.direction=="W" and (xpos-BALLSIZE/2)<BALLSPEED):
-                    # Check the next tile to the left
-                    if(xtile==0):
-                        # Edge of the game screen
-                        bounce=True
-                    else:
-                        # If the next tile doesn't have an open east, also bounce
-                        nextTile=levelData[ytile][xtile-1]
-                        if not (nextTile in openEnds["E"]):
-                            bounce=True
-                    if(bounce):
-                        self.direction="E"
-                        self.hitMiddle=False
+                    atEdge=True  
                 elif(self.direction=="E" and (xpos+BALLSIZE/2)>TILESIZE):
-                    # Check the next tile to the right
-                    if(xtile==TILESX-1):
+                    atEdge=True
+                elif(self.direction=="S" and (ypos+BALLSIZE/2)>TILESIZE):
+                    atEdge=True
+                elif(self.direction=="N" and (ypos-BALLSIZE/2)<BALLSPEED):
+                    atEdge=True
+                if(atEdge):
+                    nextTile=findNextTile((xtile,ytile), self.direction)
+                    if(nextTile==None or not isEndOpen(nextTile["type"], opposite[self.direction])):
                         bounce=True
-                    else:
-                        # If the next tile doesn't have an open west, also bounce
-                        nextTile=levelData[ytile][xtile+1]
-                        if not (nextTile in openEnds["W"]):
-                            bounce=True
-                    if(bounce):
-                        self.direction="W"
-                        self.hitMiddle=False
-                # elif(self.direction=="S" and (ypos+BALLSIZE/2)>TILESIZE):
-                #     print("Leaving a south tile")
+                if(bounce):
+                    self.direction=opposite[self.direction]
+                    self.hitMiddle=False
+                        
 
                 # Are we at the tile middle?
                 if(self.hitMiddle==False):
-                    # Track with hitMiddle, we don't want this executing multiple times.
+                    # Track with hitMiddle, we don't want this executing multiple times. That could be detected.
+                    # If the ball is not moving at 1px per time it may never hit the middle exactly.
                     # This must reset as we enter a new tile
                     if(self.direction=="W" and xpos<TILESIZE/2):
                         self.hitMiddle=True
@@ -634,25 +635,25 @@ def exploImages():
 
     return imgList
 
-def loadLevel(l):
+def loadLevel(filename):
     # Loads the level from file
     global levelData,wheels,southTs, NUM_WHEELS
     levelData=[]
-    fileName="level"+str(l)+".csv"
-    print("Loading file", fileName)
+    #filename="level"+str(l)+".csv"
+    print("Loading file", filename)
     lineCount=0
-    with open(fileName) as f:
+    with open(filename) as f:
         reader = csv.reader(f, delimiter=",")
         for row in reader:
             #print(row)
             l=len(row)
             if(l!=TILESX):
-                errorQuit("Error: In level file {}, line {} contains {} tiles, not {}".format(fileName, lineCount, l, TILESX))
+                errorQuit("Error: In level file {}, line {} contains {} tiles, not {}".format(filename, lineCount, l, TILESX))
             levelData.append(row)
             lineCount+=1
     # Check the number of lines loaded
     if(lineCount!=TILESY):
-        errorQuit("Error: In level file {}, contains {} lines not {}".format(fileName, lineCount, TILESY))
+        errorQuit("Error: In level file {}, contains {} lines not {}".format(filename, lineCount, TILESY))
     
     # Initialise wheels and south Ts
     wheels={}
@@ -708,9 +709,13 @@ def errorQuit(msg):
 
 def launchNext():
     # Launch the next ball and pick the one to come after
-    global nextCol
-    all_sprites.add(Ball(nextCol))
-    nextCol=nextBall()
+    global nextCol, ballCount
+    if(ballCount>=BALL_LIMIT-1 and BALL_LIMIT!=-1):
+        print("Ball limit reached")
+    else:
+        all_sprites.add(Ball(nextCol))
+        nextCol=nextBall()
+        ballCount+=1
 
 def findNextTile(coord, dir):
     # Finds the next tile in a specified direction
@@ -736,6 +741,18 @@ def findNextTile(coord, dir):
     return rtn
 # End of nextTile
 
+def isEndOpen(ttype, d):
+    # True if the end is open, false if not, None if tile doesn't exist
+    if(ttype==None):
+        # Been called with a None value, may be because the next tile is out of range
+        return None
+    # Split tile type, to ignore colours on painters or blockers
+    sp=ttype.split(".")
+    if(sp[0] in openEnds[d]):
+        return True
+    # Drop through to false
+    return False
+
 # Explode test
 def explodeTest():
     # Test explode function, explode all balls, except the one in the top ally
@@ -750,7 +767,7 @@ wheelImage = genWheelImage()
 ballImage = genBalls()
 explosion = exploImages()
 
-loadLevel(1)
+loadLevel(levelFile)
 
 # Main loop
 drawGameScreen()

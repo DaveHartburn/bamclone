@@ -1,0 +1,6 @@
+H,ST,H,H,H,H,ST,H
+SEL,W,H,H,H,H,W,SWL
+B,V,B,B,B,B,V,B
+B,W,H,H,H,H,W,B
+V,NEL,H,W,W,H,NWL,B
+NEL,H,B,H,H,H,H,B

@@ -476,7 +476,7 @@ class SouthT():
     # something more interesting
     def __init__(self, id):
         self.id=id      # ID is sent as a tuple of the tile coordinates
-        #print("New southT at {}".format(id))
+        print("New southT at {}".format(id))
         self.linkedWheel=None
         self.wheelLoc=None          # Which location in the wheel does it check (N,E,S,W)
         
@@ -489,7 +489,7 @@ class SouthT():
         stepCount=0             # Used for error tracking
         while(foundWheel==0):
             # Find the next tile
-           # print("Inspecting tile at {},{}".format(tilex, tiley))
+            print("Inspecting tile at {},{}".format(tilex, tiley))
             type=levelData[tiley][tilex]
             # Find the exit
             exit=None
@@ -498,13 +498,17 @@ class SouthT():
                 exit="S"
             else:
                 # All tiles should have one entry and one exit. Build list of the open ends of types
-                myOpen=[]
+                myOpen=listOpenEnds(type)
 
-                for e in ["N", "E", "S", "W"]:
-                    if(type in openEnds[e]):
-                        myOpen.append(e)
-                if(len(myOpen)!=2):
-                    errorQuit("Problem, we found the wrong number of open ends ", myOpen)
+                # for e in ["N", "E", "S", "W"]:
+                #     if(type in openEnds[e]):
+                #         myOpen.append(e)
+                l=len(myOpen)
+                if(l==0):
+                    errorQuit("Problem. SouthT leads to a dead end. This is not a valid level")
+                    break
+                elif(l!=2):
+                    errorQuit("Problem, we found the wrong number of open ends {}".format(myOpen))
                     foundWheel=2
                     break
                 # Which end do we look at?
@@ -516,42 +520,45 @@ class SouthT():
                     exit=myOpen[0]
             #print("Entry to current tile ({},{}) (a {}) from {}, exit to {}".format(tilex,tiley, type, entrydir, exit))
             # Find the coordinates of the next tile
-            if(exit=="N"):
-                nexty=tiley-1
-                nextx=tilex
-            elif(exit=="E"):
-                nextx=tilex+1
-                nexty=tiley
-            elif(exit=="S"):
-                nextx=tilex
-                nexty=tiley+1
-            elif(exit=="W"):
-                nextx=tilex-1
-                nexty=tiley
+            # if(exit=="N"):
+            #     nexty=tiley-1
+            #     nextx=tilex
+            # elif(exit=="E"):
+            #     nextx=tilex+1
+            #     nexty=tiley
+            # elif(exit=="S"):
+            #     nextx=tilex
+            #     nexty=tiley+1
+            # elif(exit=="W"):
+            #     nextx=tilex-1
+            #     nexty=tiley
             #print("Next tile is at {},{}".format(nextx, nexty))
+
+            nextTile=findNextTile((tilex,tiley), exit)
+            print("Next tile is {}".format(nextTile))
             # Have we exceeded limits?
-            if(nextx<0 or nexty<0 or nextx>TILESX or nexty>TILESY):
+            if(nextTile==None):
                 foundWheel=2
                 errorQuit("Error, ST path took us off screen")
             else:
                 # What direction do we enter the tile from?
                 entrydir=opposite[exit]
                 # Looks good, is the next tile a wheel?
-                if(levelData[nexty][nextx]=="W"):   
+                if(nextTile["type"]=="W"):   
                     # Yes
                     foundWheel=1
                     #print("Found a wheel")
                 else:
                     # No, loop
-                    tilex=nextx
-                    tiley=nexty
+                    tilex=nextTile["coord"][0]
+                    tiley=nextTile["coord"][1]
             if(stepCount>(TILESX*TILESY)):
                 foundWheel=2
                 errorQuit("Error: Unable to find wheel, infinite loop from tile {}".format(self.id))
             else:
                 stepCount+=1       
         # End of wheel while loop
-        self.linkedWheel=(nextx,nexty)
+        self.linkedWheel=nextTile["coord"]
         #print("Linked southT {} to wheel {} entry point {}".format(self.id, self.linkedWheel, entrydir))
         self.wheelLoc=entrydir
         wheels[self.linkedWheel].setInvalid(entrydir)
@@ -752,6 +759,25 @@ def isEndOpen(ttype, d):
         return True
     # Drop through to false
     return False
+
+def listOpenEnds(type):
+    # Lists the ends open for a particular type of tile
+   # print("Checking ends for type ", type)
+
+    # Split tile type, to ignore colours on painters or blockers
+    sp=type.split(".")
+    r=[]                # Return array
+    for e in ["N", "E", "S", "W"]:
+        if(type in openEnds[e]):
+            r.append(e)
+    l=len(r)
+    #print("  {} ends found - {}".format(l, r))
+    if(type!="B"):
+        if(l==0):
+            errorQuit("Unknown tile type {}".format(type))
+        elif(len(r)!=2):
+            errorQuit("Problem, we found the wrong number of open ends {} for tile type {}".format(r, type))
+    return r
 
 # Explode test
 def explodeTest():

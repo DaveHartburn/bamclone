@@ -109,10 +109,7 @@ Bugs
 - Balls don't quit sit snug when docking, until rotated
 - Issues with random selection. The first two balls are always the same colour. The rest may follow a pattern
 - In testing one wheel didn't blow. Suspect a ball dropped as I turned that wheel and it became a 'ghost' somewhere
+- Defaul level doesn't load
 
 Check in notes
 --------------
-- Allow loading of other levels with a command line parameter (for testing)
-- Can limit ball numbers (hard coded) for testing or more challenging levels
-- Improved code for bouncing off dead ends
-- Can bounce off north and south dead ends

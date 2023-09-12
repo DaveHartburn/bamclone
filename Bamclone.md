@@ -51,6 +51,8 @@ Global functions:
   drawGameScreen()        # Draws the main game screen
   genWheelImage()         # Creates the wheel image on startup
   genBalls()              # Generate the ball images on startup
+  genNextBallIcon()       # Generate the icon to show the next ball
+  genIcon(size)           # Generate an icon of the supplied size
   exploImages()           # Loads in the explosion images
   loadLevel(l)            # Load a level from file 'l'
   checkSTopen()           # Checks if a tile is open to the south - is the associated wheel slot free?
@@ -89,7 +91,7 @@ To Do
 - [X] Bouncing of north dead end
 - [X] Bouncing of south dead end
 - [X] Random new ball on docking 
-- [ ] Display new ball colour in advance
+- [X] Display new ball colour in advance
 - [ ] Level timer
 - [ ] Level designer
 - [ ] Painter blocks
@@ -100,16 +102,21 @@ To Do
 - [ ] Lobby screen
 - [ ] Progression
 - [ ] Lives?
-- [ ] Game pause (on screen button)
+- [X] Game pause (on screen button)
 - [ ] Test changing tile sizes
 - [ ] Different tile colours/textures
 
 Bugs
 ----
 - Balls don't quit sit snug when docking, until rotated
-- Issues with random selection. The first two balls are always the same colour. The rest may follow a pattern
+- FIXED: Issues with random selection. The first two balls are always the same colour. The rest may follow a pattern
 - In testing one wheel didn't blow. Suspect a ball dropped as I turned that wheel and it became a 'ghost' somewhere
-- Defaul level doesn't load
+  - Or could be down to exploded balls not clearing the wheel
+- FIXED: Defaul level doesn't load
 
 Check in notes
 --------------
+- Display new ball colour in advance
+- FIXED: Issues with random selection. The first two balls are always the same colour. The rest may follow a pattern
+- FIXED: Defaul level doesn't load
+- Game pause (on screen button)

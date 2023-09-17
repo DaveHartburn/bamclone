@@ -92,7 +92,7 @@ To Do
 - [X] Bouncing of south dead end
 - [X] Random new ball on docking 
 - [X] Display new ball colour in advance
-- [ ] Level timer
+- [X] Level timer
 - [ ] Level designer
 - [ ] Painter blocks
 - [ ] Barrier blocks
@@ -101,22 +101,17 @@ To Do
 - [ ] Score
 - [ ] Lobby screen
 - [ ] Progression
-- [ ] Lives?
 - [X] Game pause (on screen button)
-- [ ] Test changing tile sizes
 - [ ] Different tile colours/textures
+- [ ] Level intro message
+- [ ] Level/game over message
 
 Bugs
 ----
 - Balls don't quit sit snug when docking, until rotated
-- FIXED: Issues with random selection. The first two balls are always the same colour. The rest may follow a pattern
 - In testing one wheel didn't blow. Suspect a ball dropped as I turned that wheel and it became a 'ghost' somewhere
   - Or could be down to exploded balls not clearing the wheel
-- FIXED: Defaul level doesn't load
 
 Check in notes
 --------------
-- Display new ball colour in advance
-- FIXED: Issues with random selection. The first two balls are always the same colour. The rest may follow a pattern
-- FIXED: Defaul level doesn't load
-- Game pause (on screen button)
+- Level timer with timeout failure.

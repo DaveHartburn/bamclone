@@ -31,6 +31,8 @@ EXPTIME = 200           # ms for the explosion to appear and the ball finally di
 BALL_LIMIT = -1          # -1 for infinite balls. May set a limit for testing or an extra challenge
 ballCount = 0           # Track the number of balls released
 
+LEVEL_TIME = 120         # Default number of seconds for the level
+
 # Explosion details
 EXP_PREFIX=os.path.join("sprites","expl_03_00")
 EXP_SUFFIX=".png"
@@ -66,6 +68,7 @@ BALLCOLS = {
 }
 ICONBOR=3                   # Number of pixels wide for icon border
 INFOPBOR=4                  # Size of info panel border
+TIMEBARBOR=12               # Margin for timer slider
 
 # List structure of what tiles have open, used to decide if a ball can flow
 openEnds={
@@ -118,6 +121,17 @@ gradball.set_colorkey((0,0,0))
 blownIcon = pygame.image.load(os.path.join('sprites','blownCoin.png')).convert_alpha()
 blownIcon = pygame.transform.scale(blownIcon, (WHSIZE/8,WHSIZE/8))
 nextBallIcon = pygame.Surface((TOPBAR,TOPBAR))
+
+# Create structure for the timer
+ts = {
+    "startTime":0,        # Time clock starts
+    "endTime":0,          # Game over time
+    "levelTime":LEVEL_TIME*1000,    # How long the level has
+    "timeLeft":0,         # Remaining time
+    "timerMask":(0,0,0,0),     # The size of the mask over the timer bar, calculated as a rect
+    "nextUpdate":0,        # We don't update timers and do calculations every cycle of the loop as this is very frequent 
+    "pauseStart":0         # Used to adjust time when the game is paused
+}
 
 # ************* Game classes *******************
 class Ball(pygame.sprite.Sprite):
@@ -605,17 +619,24 @@ class pauseButton(pygame.sprite.Sprite):
             self.pause()
     
     def pause(self):
-        global paused, showInfoPan, infPan
-        print("Pause/play clicked?")
+        global paused, showInfoPan, infPan, ts
+        # print("Pause/play clicked?")
         paused=not paused
         if(paused):
             self.image=ctrlIcons["play"]
             infPan.setMsg("Paused")
             showInfoPan=True
+            # Record start of pause
+            ts["pauseStart"]=pygame.time.get_ticks()
         else:
             self.image=ctrlIcons["pause"]
             infPan.setMsg("")
             showInfoPan=False
+            # Adjust level timer by adding the paused time to the start and end variables
+            pt=pygame.time.get_ticks()-ts["pauseStart"]
+            ts["startTime"]+=pt
+            ts["endTime"]+=pt
+
 # End of pauseButton class
 
 class infoPanel():
@@ -636,11 +657,8 @@ class infoPanel():
         # Center on screen
         self.rect.center=(WIDTH/2, HEIGHT/2)
         if(self.msg!=""):
-            print("msg=", self.msg)
             textSurf=outlineText(self.msg, fonts["infop"], THEME["font"], THEME["dark"], 4)
             trect=textSurf.get_rect(center=(self.rect.width/2,self.rect.height/2))
-            print(self.rect.width)
-            print(trect.center)
             self.image.blit(textSurf, trect)
 
     def setMsg(self,msg):
@@ -687,6 +705,11 @@ def drawGameScreen():
     all_sprites.draw(screen)
     # Cover up balls entering the screen
     pygame.draw.rect(screen, BG, [(origin[0]+TILESIZE*TILESX, origin[1]),(WINMARG,TILESIZE)])
+
+    # Draw the timer bar
+    screen.blit(timerBar, (WINMARG, WINMARG/2))
+    # Mask out the elapsed time
+    pygame.draw.rect(screen,BG,ts["timerMask"])
 
     # Do we display the infoPanel?
     if(showInfoPan):
@@ -761,6 +784,29 @@ def genControlIcons():
     iconList["play"]=plicon
     return iconList
             
+def genTimerBar():
+    # Generates the countdown timer bar
+    # Calculate dimensions
+    global timerBar, timerSlider
+    marg=TOPBAR/5
+    timerBar=(TILESIZE*TILESX-WINMARG-TOPBAR*2-marg, TOPBAR)
+    b=TIMEBARBOR
+    timerSlider=((b,b),(timerBar[0]-b*2,TOPBAR-b*2))
+    img=genIcon(timerBar)
+
+    # Generate the slider image as a transition of red, amber, green (with more green)
+    simg=pygame.Surface((4,1))
+    pygame.draw.line(simg, (200,0,0),(0,0),(0,0))
+    pygame.draw.line(simg, (200,190,0),(1,0),(1,0))
+    pygame.draw.line(simg, (0,200,0), (2,0),(3,0))
+    # Stretch it
+    simg = pygame.transform.smoothscale(simg, (timerSlider[1]))
+    #pygame.draw.rect(img, (255,0,0), [(b,b),timerSlider])
+    img.blit(simg, timerSlider[0])
+    return img
+# End of genTimerBar
+
+
 def exploImages():
     # Loads in the explosion images
     imgList=[]
@@ -953,6 +999,25 @@ def outlineText(text, font, gfcolor=pygame.Color('dodgerblue'), ocolor=(255, 255
     surf.blit(textsurface, (opx, opx))
     return surf
 
+def updateTimer():
+    # Update the game timer if the game is not paused
+    if(not paused):
+        global ts,timerSlider
+        t=pygame.time.get_ticks()
+        if(t>ts["nextUpdate"]):
+            ts["nextUpdate"]=t+100         # Update the timer every thenth of a second
+            ts["timeLeft"]=ts["endTime"]-t
+            # Calculate the size of the timer bar mask
+            f=1-ts["timeLeft"]/ts["levelTime"]        # Fraction of time left
+            # Calculate the length the bar should be
+            l=math.floor((timerSlider[1][0]-timerSlider[0][0])*f)
+            # Work out size of the mask over the timer
+            ts["timerMask"]=(timerSlider[0][0]+WINMARG+timerSlider[1][0]-l,timerSlider[0][1]+WINMARG/2,l,timerSlider[1][1])
+            #print(ts["timerMask"])
+# End of updateTimer
+
+
+# End of updateTimer
 
 # Explode test
 def explodeTest():
@@ -972,6 +1037,7 @@ wheelImage = genWheelImage()
 ballImage = genBalls()
 explosion = exploImages()
 ctrlIcons = genControlIcons()
+timerBar = genTimerBar()
 
 pButton = pauseButton()
 all_sprites.add(pButton)
@@ -983,24 +1049,32 @@ loadLevel(levelFile)
 
 # Main loop
 drawGameScreen()
-running = True
 # Add a ball to get us started
 nextCol=nextBall()
 all_sprites.add(Ball(nextCol))
 nextCol=nextBall()
-endTime=-1
-while running:
+aTimer=-1          # Used for various timer purposes
 
+# Start the level timer
+ts["startTime"]=pygame.time.get_ticks()
+ts["endTime"]=ts["startTime"]+ts["levelTime"]
+
+# gameState:
+#   0 = running
+#   1 = finished, success
+#   2 = finished, failure/time out
+#   3 = user quit
+gameState=0
+while gameState==0:
     # Keep loop running at the right speed
     clock.tick(FPS)
-
     
     event = pygame.event.poll()
     if event.type == pygame.QUIT:
-        running = False
+        gameState=3
     elif event.type == pygame.KEYUP:
         if event.key == pygame.K_ESCAPE:
-            running = False
+            gameState=3
             print("Escape - quitting")
         elif event.key == pygame.K_e:
             explodeTest()
@@ -1018,28 +1092,34 @@ while running:
             for s in all_sprites:
                 if(type(s).__name__=="Ball"):
                     s.handleEvent(event)
-            pButton.handleEvent(event)
-                
-
-    
+            pButton.handleEvent(event) 
     # else:
     #     print("Unknown event", event.type)
     #     print(event)
     # Update sprites
     all_sprites.update()
 
+    # Update the game timer
+    updateTimer()
+    if(ts["timeLeft"]<=0):
+        # Out of time
+        gameState=2
     # Draw / render the scree
     drawGameScreen()
 
     # Check to see if all wheels are blown
     if(BLOWN_WHEELS==NUM_WHEELS):
         # Delay for a little to finish the ball explode annimation
-        if(endTime==-1):
-            endTime=pygame.time.get_ticks()+EXPTIME+300
-        if(pygame.time.get_ticks()>endTime):
+        if(aTimer==-1):
+            aTimer=pygame.time.get_ticks()+EXPTIME+300
+        if(pygame.time.get_ticks()>aTimer):
             print("*** Level complete, well done! ***")
-            running=False
+            gameState=1
 # End of main loop
 print("Game over")
+if(gameState==1):
+    print("  Success!!!")
+elif(gameState==2):
+    print("  Failed, out of time")
 
 pygame.quit()

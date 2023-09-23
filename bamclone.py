@@ -72,10 +72,10 @@ TIMEBARBOR=12               # Margin for timer slider
 
 # List structure of what tiles have open, used to decide if a ball can flow
 openEnds={
-    "N":["V","NEL","NWL","W"],
-    "E":["H", "ST", "NEL", "SEL", "W"],
-    "S":["V", "SEL", "SWL", "W"],
-    "W":["H", "ST", "NWL", "SWL", "W"]
+    "N":["V","NEL","NWL","W", "BV", "PV"],
+    "E":["H", "ST", "NEL", "SEL", "W", "BH", "PH"],
+    "S":["V", "SEL", "SWL", "W", "BV", "PV"],
+    "W":["H", "ST", "NWL", "SWL", "W", "BH", "PH"]
 }
 
 # Claculate the window size
@@ -105,7 +105,7 @@ clock = pygame.time.Clock()
 all_sprites = pygame.sprite.Group()
 
 # Load in images
-tImg = tileImages(TILESIZE, PWIDTH)
+tImg = tileImages(TILESIZE, PWIDTH, BALLCOLS)
 
 # Define the level array
 levelData=[]
@@ -241,6 +241,14 @@ class Ball(pygame.sprite.Sprite):
                         elif(tiletype.endswith("L")):
                             # We are on a corner, change direction
                             self.direction=LotherEnd(tiletype, opposite[self.direction])
+                        elif(tiletype.startswith("PH") or tiletype.startswith("PV")):
+                            # Painter, change the colour of the ball
+                            self.changeColour(tiletype[3])
+                        elif(tiletype.startswith("BH") or tiletype.startswith("BV")):
+                            # Blocker, do we allow through or bounce?
+                            blcol=tiletype.split(".")[1]
+                            if(self.colour!=blcol):
+                                self.direction=opposite[self.direction]
                                 
                     # End of hitMiddle actions
             # End of 'not on a wheel'
@@ -330,6 +338,10 @@ class Ball(pygame.sprite.Sprite):
                 # Drop the explosion counter
                 self.exploState-=1
 
+    def changeColour(self, c):
+        # Change the ball to this colour
+        self.colour=c
+        self.image=ballImage[c]
 # End of Ball class
     
 class Wheel(pygame.sprite.Sprite):
@@ -370,7 +382,8 @@ class Wheel(pygame.sprite.Sprite):
             # If the end open?
             if(nextTile!=None):
                 o=opposite[d]
-                if(nextTile["type"] in openEnds[o]):
+                #if(nextTile["type"] in openEnds[o]):
+                if(isEndOpen(nextTile["type"], o)):
                     # Yes, exit is valid
                     self.validExit[d]=True
                     #print("    Valid exit in direction ", d)

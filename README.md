@@ -7,6 +7,8 @@ For development details, see bamclone.md
 
 Version
 -------
+0.3
+* Now has level timeout, game is fully playable but a bit quiet
 0.2
 * Playable without timer
 * Fixed game crash issue listed in 0.1

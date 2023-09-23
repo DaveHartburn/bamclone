@@ -18,6 +18,10 @@ The following codes are used:
 - SWL     L south west
 - NWL     L north west
 - W       A wheel
+- BH.c    A horizontal barrier tile of colour c (c=R|G|B|Y)
+- BV.c    A vertical barrier tile of colour c
+- PH.c    A horizontal painter tile of colour c
+- PV.c    A vertical painter tile of colour c
 
 
 Classes and functions
@@ -94,8 +98,8 @@ To Do
 - [X] Display new ball colour in advance
 - [X] Level timer
 - [ ] Level designer
-- [ ] Painter blocks
-- [ ] Barrier blocks
+- [X] Painter blocks
+- [X] Barrier blocks
 - [ ] Sound effects
 - [ ] More levels
 - [ ] Score
@@ -114,4 +118,5 @@ Bugs
 
 Check in notes
 --------------
-- Level timer with timeout failure.
+- Implemented painter blocks
+- Implemented barrier blocks

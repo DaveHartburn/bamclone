@@ -15,7 +15,7 @@ PMIDCOL=(230,230,230)
 
 class tileImages():
 
-    def __init__(self, ts, pipew):
+    def __init__(self, ts, pipew, cols):
         print("Starting tile generation")
         self.ts=ts          # Set the tile size
         self.pipew=pipew
@@ -65,8 +65,57 @@ class tileImages():
         img=pygame.Surface.copy(self.tileList["B"])
         img.blit(self.pipes["W"], (0,0))
         self.tileList["W"]=img
-        
 
+        # Create painter blocks
+        for c in cols:
+            #print("Generating painter ", c)
+            # Make alpha colour
+            pc=cols[c]+(16, )
+            #print(pc)
+            img=pygame.Surface.copy(self.tileList["B"])
+            pimg=pygame.Surface((ts,ts), pygame.SRCALPHA)
+            pimg.set_alpha(128)
+            pygame.draw.rect(pimg,cols[c],(TILEBOR,TILEBOR,ts-TILEBOR*2,ts-TILEBOR*2))
+            img.blit(pimg,(0,0))
+            vimg=img.copy()
+            img.blit(self.pipes["H"], (0,0))
+            vimg.blit(self.pipes["V"], (0,0))
+            self.tileList["PH.{}".format(c)]=img
+            self.tileList["PV.{}".format(c)]=vimg
+        
+        # Creater blockers
+        for c in cols:
+            img=pygame.Surface.copy(self.tileList["B"])
+            himg=pygame.Surface.copy(self.tileList["B"])
+            barimg=pygame.Surface((ts,ts), pygame.SRCALPHA)
+            #barimg.set_alpha(128)
+            w=ts/5          # Width of barrier
+            p=ts-TILEBOR    # Number of points
+            f=4             # Wave frequency
+            a=5          # Wave amplitude
+            hl=3        # Thickness of highlight
+            for i in range(TILEBOR,p+1):
+                j=i/p*2*math.pi
+                y=(ts/2-w/2)+(a*math.cos(j*f))
+                pygame.draw.rect(barimg,cols[c],(i,y,1,w))
+                # Add highlights
+                darkCol=self.colorInc(cols[c],-20)
+                baseC=pygame.Color(cols[c])
+                lightCol=baseC.lerp((255,255,255),0.5)
+                pygame.draw.rect(barimg,lightCol,(i,y,1,hl))
+                pygame.draw.rect(barimg,darkCol,(i,y+w-hl,1,hl))
+            # Make a vertical stripe (to be applied to horizontal)
+            horizbar=pygame.transform.rotate(barimg,90)
+            # Create the vertical image
+            img.blit(barimg,(0,0))
+            img.blit(self.pipes["V"], (0,0))
+            self.tileList["BV.{}".format(c)]=img
+            # Create the horizontal image
+            himg.blit(horizbar,(0,0))
+            himg.blit(self.pipes["H"], (0,0))
+            self.tileList["BH.{}".format(c)]=himg
+
+    # End of init, and tile creation
 
     def unkTile(self):
         # An unknown tile, returned when we don't know what is being asked for
@@ -79,7 +128,7 @@ class tileImages():
         if tname in self.tileList:
             return self.tileList[tname]
         else:
-            print("Unknown tile "+tname)
+            #print("Unknown tile "+tname)
             return self.tileList["UNK"]
         
     def genBlank(self, bgcol):

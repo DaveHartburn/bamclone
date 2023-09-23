@@ -100,7 +100,7 @@ To Do
 - [ ] Level designer
 - [X] Painter blocks
 - [X] Barrier blocks
-- [ ] Sound effects
+- [X] Sound effects
 - [ ] More levels
 - [ ] Score
 - [ ] Lobby screen
@@ -108,7 +108,7 @@ To Do
 - [X] Game pause (on screen button)
 - [ ] Different tile colours/textures
 - [ ] Level intro message
-- [ ] Level/game over message
+- [X] Level/game over message
 
 Bugs
 ----
@@ -118,5 +118,5 @@ Bugs
 
 Check in notes
 --------------
-- Implemented painter blocks
-- Implemented barrier blocks
+- Added sound effects
+- Added Level/game over message. Dummy score of 9999 displayed

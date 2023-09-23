@@ -122,6 +122,17 @@ blownIcon = pygame.image.load(os.path.join('sprites','blownCoin.png')).convert_a
 blownIcon = pygame.transform.scale(blownIcon, (WHSIZE/8,WHSIZE/8))
 nextBallIcon = pygame.Surface((TOPBAR,TOPBAR))
 
+# Set up sounds
+soundDir="sounds"
+sounds={
+    "woosh":pygame.mixer.Sound(os.path.join(soundDir, "punch-2-166695.mp3")),
+    "dock":pygame.mixer.Sound(os.path.join(soundDir, "clank1-91862.mp3")),
+    "explode":pygame.mixer.Sound(os.path.join(soundDir, "impact-152508.mp3")),
+    "launch":pygame.mixer.Sound(os.path.join(soundDir, "sci-fi-glitch-sound-105730.wav")),
+    "success":pygame.mixer.Sound(os.path.join(soundDir, "game-start-6104.wav")),
+    "fail":pygame.mixer.Sound(os.path.join(soundDir, "failure-drum-sound-effect-2-7184.wav"))
+}
+
 # Create structure for the timer
 ts = {
     "startTime":0,        # Time clock starts
@@ -303,6 +314,7 @@ class Ball(pygame.sprite.Sprite):
                     wheels[self.wheel].undock(self.direction)
                     # Remove from wheel
                     self.wheel=-1
+                    sounds["launch"].play()
                 # else:
                 #     print("No valid exit that way....")
     # End of handle event
@@ -466,6 +478,7 @@ class Wheel(pygame.sprite.Sprite):
             #print("I was clicked ", self.id)
             self.rotating=True
             self.rotangle=0
+            sounds["woosh"].play()
 
     def slotEmpty(self, d):
         # Is there a ball in slot d? True if empty, false if there is a ball
@@ -483,9 +496,11 @@ class Wheel(pygame.sprite.Sprite):
             self.docked[point].explode()
             ball.explode()
             self.numDocked-=1
+            sounds["explode"].play()
         else:
             self.docked[point]=ball
             self.numDocked+=1
+            sounds["dock"].play()
         # Are we full?
         if(self.numDocked==4):
             # Yes
@@ -498,6 +513,7 @@ class Wheel(pygame.sprite.Sprite):
                     sameCol=False
             if(sameCol==True):
                 # All the same colour, explode
+                sounds["explode"].play()
                 for p in self.docked:
                     self.docked[p].explode()
                     # Has this already been blown?
@@ -669,8 +685,13 @@ class infoPanel():
         self.rect=self.image.get_rect()
         # Center on screen
         self.rect.center=(WIDTH/2, HEIGHT/2)
+        # Set the font
+        if(len(self.msg)>12):
+            font=fonts["infop_m"]
+        else:
+            font=fonts["infop"]
         if(self.msg!=""):
-            textSurf=outlineText(self.msg, fonts["infop"], THEME["font"], THEME["dark"], 4)
+            textSurf=outlineText(self.msg, font, THEME["font"], THEME["dark"], 4)
             trect=textSurf.get_rect(center=(self.rect.width/2,self.rect.height/2))
             self.image.blit(textSurf, trect)
 
@@ -1043,7 +1064,8 @@ def explodeTest():
 
 # Load fonts
 fonts={
-    "infop":pygame.font.SysFont(fontName, 128)
+    "infop":pygame.font.SysFont(fontName, 128),
+    "infop_m":pygame.font.SysFont(fontName, 96)
 }
 # Generate images
 wheelImage = genWheelImage()
@@ -1078,6 +1100,7 @@ ts["endTime"]=ts["startTime"]+ts["levelTime"]
 #   2 = finished, failure/time out
 #   3 = user quit
 gameState=0
+sounds["launch"].play()
 while gameState==0:
     # Keep loop running at the right speed
     clock.tick(FPS)
@@ -1091,6 +1114,12 @@ while gameState==0:
             print("Escape - quitting")
         elif event.key == pygame.K_e:
             explodeTest()
+        elif event.key == pygame.K_w:
+            # Test winning
+            gameState=1
+        elif event.key == pygame.K_f:
+            # Test failure
+            gameState=2
         elif event.key == pygame.K_p:
             pButton.pause()
     elif event.type == pygame.MOUSEBUTTONDOWN:
@@ -1132,7 +1161,15 @@ while gameState==0:
 print("Game over")
 if(gameState==1):
     print("  Success!!!")
+    infPan.setMsg("Success, score=9999")
+    showInfoPan=True
+    drawGameScreen()
+    sounds["success"].play()
+    pygame.time.delay(3000)
 elif(gameState==2):
-    print("  Failed, out of time")
-
+    infPan.setMsg("Out of time, score=9999")
+    showInfoPan=True
+    drawGameScreen()
+    sounds["fail"].play()
+    pygame.time.delay(3000)
 pygame.quit()

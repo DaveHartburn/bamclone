@@ -30,3 +30,5 @@ Explosion images from OpenGameArt
 https://opengameart.org/
 https://opengameart.org/content/explosions-0
 Author: chabull
+
+All sound effects also from opengamearg.org

@@ -13,13 +13,13 @@ from tileImages import tileImages
 TILESIZE = 120          # The size of individual tiles (square)
 TILESX = 8              # Number of tiles across the X
 TILESY = 6               # Number of tiles across the y
-WINMARG = TILESIZE/3      # The margin around the tiles
-PWIDTH=TILESIZE/2.5     # Pipe width. Pipes and balls are based on this size
+WINMARG = TILESIZE//3      # The margin around the tiles
+PWIDTH=TILESIZE//2.5     # Pipe width. Pipes and balls are based on this size
 WHSIZE=TILESIZE*0.9     # Size of a wheel
-BALLSIZE=PWIDTH*0.7
+BALLSIZE=math.floor(PWIDTH*0.7)
 
 # Define the top bar
-TOPMARG=WINMARG/2       # Use a smaller margin, screen down will go TOPMARG, TOPBAR, TOPMARG
+TOPMARG=WINMARG//2       # Use a smaller margin, screen down will go TOPMARG, TOPBAR, TOPMARG
 TOPBAR=BALLSIZE+8       # Allow display for a ball, and a border
 
 # Ball speed, rot steps and FPS control how fast the game flows. If you make the tiles smaller, you may
@@ -59,6 +59,10 @@ fontName='freesansbold'    # This should be a generic font on all systems
 
 LINECOL=(200,200,200)
 LINEWIDTH=2
+bxmarg=40           # Button border margin
+bymarg=30
+brad=20             # Button corner radius
+
 # Ball colours
 BALLCOLS = {
     "R":(255,0,0),
@@ -81,6 +85,7 @@ openEnds={
 # Claculate the window size
 WIDTH=(TILESIZE*TILESX)+(WINMARG*2)
 HEIGHT=(TILESIZE*TILESY)+(WINMARG*2)+TOPBAR
+print(WIDTH,HEIGHT)
 origin=(WINMARG, WINMARG+TOPBAR)
 paused=False
 nextCol="R"
@@ -111,6 +116,9 @@ tImg = tileImages(TILESIZE, PWIDTH, BALLCOLS)
 levelData=[]
 wheels={}
 southTs={}
+
+curLevel=0          # Current level
+maxLevels=10        # Default for the maximum number of levels, refreshed when file is read
 
 # Define opposites, used for traversing tiles
 opposite={"N":"S","E":"W","S":"N","W":"E"}
@@ -751,6 +759,13 @@ def drawGameScreen():
     pygame.display.flip()
 # End of drawGameScreen()
 
+def drawLobbyScreen():
+    # Blits lobby components to the screen
+    global lobScreen
+    screen.blit(lobScreen["main"],(0,0))
+    screen.blit(lobScreen["levelSel"], lobScreen["levelSel_rect"])
+    pygame.display.flip()
+
 def genWheelImage():
     # Create the wheel image. We need a blank (without the cutouts) and the stationary wheel with
     # cutouts aligned to the pipes. But when rotating, the shine stays in the same place and the cut
@@ -1050,8 +1065,118 @@ def updateTimer():
             #print(ts["timerMask"])
 # End of updateTimer
 
+def lobby():
+    # Show a lobby/title screen
+    global curLevel, lobScreen
 
-# End of updateTimer
+    leaveLobby=0        # 0=stay,1=start,2=quit
+    while leaveLobby==0:
+        # Lobby handling loop
+        clock.tick(FPS)
+
+        event = pygame.event.poll()
+        if event.type == pygame.QUIT:
+            leaveLobby=2
+        elif event.type == pygame.MOUSEBUTTONDOWN:
+            print("Click")
+            # Have any icons been clicked?
+            if(lobScreen["start_rect"].collidepoint(event.pos)):
+                print("Start clicked")
+                leaveLobby=1
+            elif(lobScreen["quit_rect"].collidepoint(event.pos)):
+                print("Quit clicked")
+                leaveLobby=2
+            elif(lobScreen["levelSel_rect"].collidepoint(event.pos)):
+                # Level selection, change level counter
+                if(event.button==1):
+                    # Left, increase
+                    curLevel+=1
+                    if(curLevel>=maxLevels-1):
+                        curLevel=maxLevels-1
+                if(event.button==3):
+                    # Right button clicked
+                    curLevel-=1
+                    if(curLevel<0):
+                        curLevel=0
+                # Regenerate icon
+                (lobScreen["levelSel"],junkVar)=genLevelSel(bxmarg, bymarg, brad)
+
+        drawLobbyScreen()
+    # What did we exit with
+    if(leaveLobby==2):
+        print("Quitting")
+        pygame.quit()
+        quit()
+# End of the lobby loop
+
+def genLobbyScreen():
+    # Generates components used for the lobby screen
+
+    lobStruct={}
+
+    msurf=pygame.Surface((WIDTH, HEIGHT))         # Main surface
+    msurf.fill(THEME["bg"])
+    pygame.draw.rect(msurf, THEME["main"], (WINMARG,WINMARG,WIDTH-WINMARG*2,HEIGHT-WINMARG*2))
+    title=outlineText("BamClone",fonts["infop"],THEME["font"], THEME["dark"], 4)
+    trect=title.get_rect()
+    trect.center=(WIDTH/2,trect.height)
+    msurf.blit(title,trect)
+    lobStruct["main"]=msurf
+
+    # Start game button
+    ssurf=outlineText("Start game",fonts["infop_m"],THEME["font"], THEME["dark"], 4)
+    srect=ssurf.get_rect()
+    srect.center=(WIDTH/2,HEIGHT-WINMARG-300)
+    msurf.blit(ssurf,srect)
+    # Add an outline
+    srect=srect.inflate(bxmarg, bymarg)
+    pygame.draw.rect(msurf, THEME["dark"], srect, 4, border_radius=brad)    
+    lobStruct["start_rect"]=srect       # Need record of dimensions for mouse detection
+
+    # Make quit button
+    qsurf=outlineText("Quit",fonts["infop_m"],THEME["font"], THEME["dark"], 4)
+    qrect=qsurf.get_rect()
+    qrect.center=(WIDTH/2,HEIGHT-WINMARG-150)
+    msurf.blit(qsurf,qrect)
+    # Add an outline
+    qrect=qrect.inflate(bxmarg, bymarg)
+    pygame.draw.rect(msurf, THEME["dark"], qrect, 4, border_radius=brad)
+    lobStruct["quit_rect"]=qrect
+
+    (lobStruct["levelSel"],lobStruct["levelSel_rect"])=genLevelSel(bxmarg, bymarg, brad)
+    lobStruct["levelSel_rect"].center=(WIDTH/2,HEIGHT-WINMARG-450)
+    print(lobStruct["levelSel_rect"])
+    return lobStruct
+# End of genLobbyScreenS
+
+def genLevelSel(bxmarg, bymarg, brad):
+    # Generate a level select button. Dynamic, will change according to the selected level number
+    global curLevel
+    # Button surface
+    btext="Level {:02d}".format(curLevel+1)
+    ssurf=outlineText(btext,fonts["infop_m"],THEME["font"], THEME["dark"], 4)
+    srect=ssurf.get_rect()
+    #srect.center=((bxmarg+srect.width/2), (bymarg+srect.height)/2)
+
+    # Add an outline
+    srectbor=srect.inflate(bxmarg, bymarg)
+    srectbor.center=(srectbor.width/2, srectbor.height/2)
+    print("srect---->srectbor")
+    print(srect)
+    print(srectbor)
+    # Make surface to plot it on
+    print(srectbor.width, srectbor.height)
+
+    # Make surfae to paste it all to
+    lsurf=pygame.Surface((srectbor.width, srectbor.height))
+    lsurf.fill(THEME["main"])
+    srect.center=(srectbor.width/2, srectbor.height/2)
+    lsurf.blit(ssurf, srect)
+    pygame.draw.rect(lsurf, THEME["dark"], srectbor, 4, border_radius=brad)   
+    print(lsurf.get_rect())
+    lrect=lsurf.get_rect()
+    lrect.centery=(HEIGHT-WINMARG-400)
+    return (lsurf, lrect)
 
 # Explode test
 def explodeTest():
@@ -1067,6 +1192,7 @@ fonts={
     "infop":pygame.font.SysFont(fontName, 128),
     "infop_m":pygame.font.SysFont(fontName, 96)
 }
+
 # Generate images
 wheelImage = genWheelImage()
 ballImage = genBalls()
@@ -1078,7 +1204,10 @@ pButton = pauseButton()
 all_sprites.add(pButton)
 
 infPan=infoPanel()
+lobScreen=genLobbyScreen()
 
+# Show lobby screen
+lobby()
 
 loadLevel(levelFile)
 

@@ -103,7 +103,7 @@ To Do
 - [X] Sound effects
 - [ ] More levels
 - [ ] Score
-- [ ] Lobby screen
+- [X] Lobby screen
 - [ ] Progression
 - [X] Game pause (on screen button)
 - [ ] Different tile colours/textures
@@ -118,5 +118,3 @@ Bugs
 
 Check in notes
 --------------
-- Added sound effects
-- Added Level/game over message. Dummy score of 9999 displayed

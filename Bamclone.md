@@ -23,6 +23,7 @@ The following codes are used:
 - PH.c    A horizontal painter tile of colour c
 - PV.c    A vertical painter tile of colour c
 
+In the levels directory, the files "levelList" is a simple list of level files in the order they should be played. Use this to construct the main game play. Supplying a level on the command line overrides this list and plays the game as a single level game.
 
 Classes and functions
 =====================
@@ -104,11 +105,12 @@ To Do
 - [ ] More levels
 - [ ] Score
 - [X] Lobby screen
-- [ ] Progression
+- [X] Progression
 - [X] Game pause (on screen button)
 - [ ] Different tile colours/textures
 - [ ] Level intro message
 - [X] Level/game over message
+- [ ] Difficulty
 
 Bugs
 ----
@@ -118,3 +120,8 @@ Bugs
 
 Check in notes
 --------------
+- Created a third level, dlevel3.csv
+- Allowed space before an element in a level file, to make them a bit more readable.
+- Changed the blank template to include the spaces
+- Created levelList file
+- Level progression, can play through a series of multiple levels

@@ -32,6 +32,7 @@ BALL_LIMIT = -1          # -1 for infinite balls. May set a limit for testing or
 ballCount = 0           # Track the number of balls released
 
 LEVEL_TIME = 120         # Default number of seconds for the level
+LEVEL_LIST_FILE = os.path.join("levels", "levelList")
 
 # Explosion details
 EXP_PREFIX=os.path.join("sprites","expl_03_00")
@@ -85,18 +86,33 @@ openEnds={
 # Claculate the window size
 WIDTH=(TILESIZE*TILESX)+(WINMARG*2)
 HEIGHT=(TILESIZE*TILESY)+(WINMARG*2)+TOPBAR
-print(WIDTH,HEIGHT)
+#print(WIDTH,HEIGHT)
 origin=(WINMARG, WINMARG+TOPBAR)
 paused=False
 nextCol="R"
 showInfoPan=False
 
+# Set up level data
 # Default level name
-levelFile=os.path.join("levels","level1.csv")
+
+# levelFile=os.path.join("levels","level1.csv")
 # Process command line arguments
 # Basic - If a second argument is supplied, assume this is the path to a level file
 if(len(sys.argv)>1):
-    levelFile=sys.argv[1]
+    # File supplied on command line, game is only single level
+    levelList=[sys.argv[1]]
+    curLevel=0
+    maxLevels=1
+else:
+    # Load the level list
+    curLevel=0          # Current level
+    maxLevels=0 
+    levelList=[]      
+    with open(LEVEL_LIST_FILE, "r") as f:
+        for l in f:
+            levelList.append(os.path.join("levels", l.rstrip('\n')))
+            maxLevels+=1
+    #print(levelList)
 
 
 
@@ -117,8 +133,7 @@ levelData=[]
 wheels={}
 southTs={}
 
-curLevel=0          # Current level
-maxLevels=10        # Default for the maximum number of levels, refreshed when file is read
+
 
 # Define opposites, used for traversing tiles
 opposite={"N":"S","E":"W","S":"N","W":"E"}
@@ -528,6 +543,7 @@ class Wheel(pygame.sprite.Sprite):
                     if(self.blown==False):
                         self.blown=True
                         BLOWN_WHEELS+=1
+                        #print("BLOWN WHEELS=", BLOWN_WHEELS)
                         # Game over is tracked in main game loop
 
         return self.dockingOrig[point]
@@ -871,11 +887,10 @@ def loadLevel(filename):
     # Loads the level from file
     global levelData,wheels,southTs, NUM_WHEELS
     levelData=[]
-    #filename="level"+str(l)+".csv"
-    print("Loading file", filename)
+    #print("Loading file", filename)
     lineCount=0
     with open(filename) as f:
-        reader = csv.reader(f, delimiter=",")
+        reader = csv.reader(f, skipinitialspace=True, delimiter=",")
         for row in reader:
             #print(row)
             l=len(row)
@@ -1078,13 +1093,13 @@ def lobby():
         if event.type == pygame.QUIT:
             leaveLobby=2
         elif event.type == pygame.MOUSEBUTTONDOWN:
-            print("Click")
+            #print("Click")
             # Have any icons been clicked?
             if(lobScreen["start_rect"].collidepoint(event.pos)):
-                print("Start clicked")
+                #print("Start clicked")
                 leaveLobby=1
             elif(lobScreen["quit_rect"].collidepoint(event.pos)):
-                print("Quit clicked")
+                #print("Quit clicked")
                 leaveLobby=2
             elif(lobScreen["levelSel_rect"].collidepoint(event.pos)):
                 # Level selection, change level counter
@@ -1145,7 +1160,7 @@ def genLobbyScreen():
 
     (lobStruct["levelSel"],lobStruct["levelSel_rect"])=genLevelSel(bxmarg, bymarg, brad)
     lobStruct["levelSel_rect"].center=(WIDTH/2,HEIGHT-WINMARG-450)
-    print(lobStruct["levelSel_rect"])
+    #print(lobStruct["levelSel_rect"])
     return lobStruct
 # End of genLobbyScreenS
 
@@ -1161,11 +1176,6 @@ def genLevelSel(bxmarg, bymarg, brad):
     # Add an outline
     srectbor=srect.inflate(bxmarg, bymarg)
     srectbor.center=(srectbor.width/2, srectbor.height/2)
-    print("srect---->srectbor")
-    print(srect)
-    print(srectbor)
-    # Make surface to plot it on
-    print(srectbor.width, srectbor.height)
 
     # Make surfae to paste it all to
     lsurf=pygame.Surface((srectbor.width, srectbor.height))
@@ -1173,11 +1183,12 @@ def genLevelSel(bxmarg, bymarg, brad):
     srect.center=(srectbor.width/2, srectbor.height/2)
     lsurf.blit(ssurf, srect)
     pygame.draw.rect(lsurf, THEME["dark"], srectbor, 4, border_radius=brad)   
-    print(lsurf.get_rect())
     lrect=lsurf.get_rect()
     lrect.centery=(HEIGHT-WINMARG-400)
     return (lsurf, lrect)
+# End of genLevelSel
 
+    
 # Explode test
 def explodeTest():
     # Test explode function, explode all balls, except the one in the top ally
@@ -1185,6 +1196,120 @@ def explodeTest():
         if(type(s).__name__=="Ball"):
             if(s.newBall==False):
                 s.explode()    
+
+def playLevel():
+    # Main loop controlling playing an individual level
+    global curLevel, levelList, all_sprites, ts, showInfoPan, BLOWN_WHEELS, NUM_WHEELS
+    levelFile=levelList[curLevel]
+    loadLevel(levelFile)
+
+    #print("Starting level, NUM_WHEELS=", NUM_WHEELS)
+    # Inital display
+    drawGameScreen()
+
+    # Add a ball to get us started
+    nextCol=nextBall()
+    all_sprites.add(Ball(nextCol))
+    nextCol=nextBall()
+    aTimer=-1          # Used for various timer purposes
+
+    # Start the level timer
+    ts["startTime"]=pygame.time.get_ticks()
+    ts["endTime"]=ts["startTime"]+ts["levelTime"]
+
+    # gameState:
+    #   0 = running
+    #   1 = finished, success
+    #   2 = finished, failure/time out
+    #   3 = user quit
+    gameState=0
+    sounds["launch"].play()
+    while gameState==0:
+        # Keep loop running at the right speed
+        clock.tick(FPS)
+        
+        event = pygame.event.poll()
+        if event.type == pygame.QUIT:
+            gameState=3
+        elif event.type == pygame.KEYUP:
+            if event.key == pygame.K_ESCAPE:
+                gameState=3
+                print("Escape - quitting")
+            elif event.key == pygame.K_e:
+                explodeTest()
+            elif event.key == pygame.K_w:
+                # Test winning
+                gameState=1
+            elif event.key == pygame.K_f:
+                # Test failure
+                gameState=2
+            elif event.key == pygame.K_p:
+                pButton.pause()
+        elif event.type == pygame.MOUSEBUTTONDOWN:
+            # Button 3, right click. Did we click a wheel?
+            if(event.button==3):
+                #print("Right click")
+                for w in wheels:
+                    wheels[w].handleEvent(event)
+            elif(event.button==1):
+                # Left click, did we click a ball?
+                # print("Left click")
+                for s in all_sprites:
+                    if(type(s).__name__=="Ball"):
+                        s.handleEvent(event)
+                pButton.handleEvent(event) 
+        # else:
+        #     print("Unknown event", event.type)
+        #     print(event)
+        # Update sprites
+        all_sprites.update()
+
+        # Update the game timer
+        updateTimer()
+        if(ts["timeLeft"]<=0):
+            # Out of time
+            gameState=2
+        # Draw / render the scree
+        drawGameScreen()
+
+        # Check to see if all wheels are blown
+        if(BLOWN_WHEELS==NUM_WHEELS):
+            # Delay for a little to finish the ball explode annimation
+            if(aTimer==-1):
+                aTimer=pygame.time.get_ticks()+EXPTIME+300
+            if(pygame.time.get_ticks()>aTimer):
+                print("*** Level complete, well done! ***")
+                gameState=1
+    # End of level loop, process exit status
+    moreLevels=False    # Assume we are done
+    if(gameState==1):
+        # Level completed successfully
+        # Increase the level counter
+        curLevel+=1
+
+        # Have we played all levels?
+        if(curLevel>=maxLevels):
+            print("Game complete")
+            infPan.setMsg("Game complete, score=9999")
+        else:
+            print("  Success!!!")
+            infPan.setMsg("Success, score=9999")
+            moreLevels=True # Keep playing
+        showInfoPan=True
+        drawGameScreen()
+        sounds["success"].play()
+        pygame.time.delay(3000)
+        showInfoPan=False
+    elif(gameState==2):
+        infPan.setMsg("Out of time, score=9999")
+        showInfoPan=True
+        drawGameScreen()
+        sounds["fail"].play()
+        pygame.time.delay(3000)
+        showInfoPan=False
+    return moreLevels
+# End of playLevel()
+
 # ************* End of functions / Start of main code ******************
 
 # Load fonts
@@ -1206,99 +1331,21 @@ all_sprites.add(pButton)
 infPan=infoPanel()
 lobScreen=genLobbyScreen()
 
-# Show lobby screen
-lobby()
 
-loadLevel(levelFile)
+# Main loop structure. An explicit quit is called on the lobby screen, so a while True is valid
+while True:
+    # Show lobby screen
+    lobby()
 
-# Main loop
-drawGameScreen()
-# Add a ball to get us started
-nextCol=nextBall()
-all_sprites.add(Ball(nextCol))
-nextCol=nextBall()
-aTimer=-1          # Used for various timer purposes
+    gameRunning=True
+    while gameRunning:
+        # Reset everything and load next level
+        all_sprites = pygame.sprite.Group()
+        BLOWN_WHEELS=0
+        NUM_WHEELS=0
+        gameRunning=playLevel()
 
-# Start the level timer
-ts["startTime"]=pygame.time.get_ticks()
-ts["endTime"]=ts["startTime"]+ts["levelTime"]
-
-# gameState:
-#   0 = running
-#   1 = finished, success
-#   2 = finished, failure/time out
-#   3 = user quit
-gameState=0
-sounds["launch"].play()
-while gameState==0:
-    # Keep loop running at the right speed
-    clock.tick(FPS)
-    
-    event = pygame.event.poll()
-    if event.type == pygame.QUIT:
-        gameState=3
-    elif event.type == pygame.KEYUP:
-        if event.key == pygame.K_ESCAPE:
-            gameState=3
-            print("Escape - quitting")
-        elif event.key == pygame.K_e:
-            explodeTest()
-        elif event.key == pygame.K_w:
-            # Test winning
-            gameState=1
-        elif event.key == pygame.K_f:
-            # Test failure
-            gameState=2
-        elif event.key == pygame.K_p:
-            pButton.pause()
-    elif event.type == pygame.MOUSEBUTTONDOWN:
-        # Button 3, right click. Did we click a wheel?
-        if(event.button==3):
-            #print("Right click")
-            for w in wheels:
-                wheels[w].handleEvent(event)
-        elif(event.button==1):
-            # Left click, did we click a ball?
-            # print("Left click")
-            for s in all_sprites:
-                if(type(s).__name__=="Ball"):
-                    s.handleEvent(event)
-            pButton.handleEvent(event) 
-    # else:
-    #     print("Unknown event", event.type)
-    #     print(event)
-    # Update sprites
-    all_sprites.update()
-
-    # Update the game timer
-    updateTimer()
-    if(ts["timeLeft"]<=0):
-        # Out of time
-        gameState=2
-    # Draw / render the scree
-    drawGameScreen()
-
-    # Check to see if all wheels are blown
-    if(BLOWN_WHEELS==NUM_WHEELS):
-        # Delay for a little to finish the ball explode annimation
-        if(aTimer==-1):
-            aTimer=pygame.time.get_ticks()+EXPTIME+300
-        if(pygame.time.get_ticks()>aTimer):
-            print("*** Level complete, well done! ***")
-            gameState=1
 # End of main loop
-print("Game over")
-if(gameState==1):
-    print("  Success!!!")
-    infPan.setMsg("Success, score=9999")
-    showInfoPan=True
-    drawGameScreen()
-    sounds["success"].play()
-    pygame.time.delay(3000)
-elif(gameState==2):
-    infPan.setMsg("Out of time, score=9999")
-    showInfoPan=True
-    drawGameScreen()
-    sounds["fail"].play()
-    pygame.time.delay(3000)
+
+# We should never reach this line
 pygame.quit()

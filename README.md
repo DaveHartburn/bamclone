@@ -7,6 +7,11 @@ For development details, see bamclone.md
 
 Version
 -------
+0.4
+* Can now play through a series of levels
+* Sound added
+* Has a bug where a wheel in which balls have collided doesn't blow
+* Score is fixed at 9999
 0.3
 * Now has level timeout, game is fully playable but a bit quiet
 0.2

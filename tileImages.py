@@ -16,7 +16,7 @@ PMIDCOL=(230,230,230)
 class tileImages():
 
     def __init__(self, ts, pipew, cols):
-        print("Starting tile generation")
+        #print("Starting tile generation")
         self.ts=ts          # Set the tile size
         self.pipew=pipew
         self.tileList={}    # Store the tiles

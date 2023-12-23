@@ -24,14 +24,14 @@ TOPBAR=BALLSIZE+8       # Allow display for a ball, and a border
 
 # Ball speed, rot steps and FPS control how fast the game flows. If you make the tiles smaller, you may
 # want to drop FPS or slow down the ball, as it will still cover the same amount of pixels as a larger tile
-BALLSPEED=3             # Number of pixels to move per cycle
+BALLSPEED=2             # Number of pixels to move per cycle
 ROTSTEPS=10             # Number of steps to rotate the wheel in
 FPS = 120               # Game frames per second
 EXPTIME = 200           # ms for the explosion to appear and the ball finally die
 BALL_LIMIT = -1          # -1 for infinite balls. May set a limit for testing or an extra challenge
 ballCount = 0           # Track the number of balls released
 
-LEVEL_TIME = 120         # Default number of seconds for the level
+LEVEL_TIME = 130         # Default number of seconds for the level
 LEVEL_LIST_FILE = os.path.join("levels", "levelList")
 
 # Explosion details

@@ -120,8 +120,3 @@ Bugs
 
 Check in notes
 --------------
-- Created a third level, dlevel3.csv
-- Allowed space before an element in a level file, to make them a bit more readable.
-- Changed the blank template to include the spaces
-- Created levelList file
-- Level progression, can play through a series of multiple levels

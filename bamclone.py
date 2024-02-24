@@ -325,10 +325,12 @@ class Ball(pygame.sprite.Sprite):
             self.direction=docPoint
 
     def handleEvent(self,event):
+        isMe=False;
         if(paused):
-            return
+            return False
         if(self.rect.collidepoint(event.pos)):
             #print("I was clicked ", self.colour)
+            isMe=True
             if(self.wheel!=-1):
                 #print("  and I was docked in wheel {} point {}, lets go".format(self.wheel, self.direction))
                 # Check if I can launch in this direction
@@ -340,6 +342,7 @@ class Ball(pygame.sprite.Sprite):
                     sounds["launch"].play()
                 # else:
                 #     print("No valid exit that way....")
+        return isMe
     # End of handle event
 
     def explode(self):
@@ -499,9 +502,22 @@ class Wheel(pygame.sprite.Sprite):
             return
         if(self.rect.collidepoint(event.pos)):
             #print("I was clicked ", self.id)
-            self.rotating=True
-            self.rotangle=0
-            sounds["woosh"].play()
+            if(event.button==3):
+                self.rotating=True
+                self.rotangle=0
+                sounds["woosh"].play()
+            #elif(event.button==1):
+                # Should only click left on a wheel when debugging
+                #self.debugWheel()
+
+    def debugWheel(self):
+        print("Debugging wheel ", self.id)
+        for i in self.docked:
+            if(self.docked[i]==None):
+                print("  {} is empty".format(i))
+            else:
+                print("  {} = {}".format(i,self.docked[i].colour))
+        print("  There are {} balls docked".format(self.numDocked))
 
     def slotEmpty(self, d):
         # Is there a ball in slot d? True if empty, false if there is a ball
@@ -514,16 +530,19 @@ class Wheel(pygame.sprite.Sprite):
         # Dock the ball and return coordinates for docking point
         global BLOWN_WHEELS
         # Is there already another ball docked here?
+        #print("Docking ball, already docked=",self.numDocked)
         if(self.docked[point]!=None):
             # Yes, explode both
+            #print("BOOM")
             self.docked[point].explode()
             ball.explode()
-            self.numDocked-=1
+            #self.numDocked-=1   -- The explosion undocks and decreases the counter at the end
             sounds["explode"].play()
         else:
             self.docked[point]=ball
             self.numDocked+=1
             sounds["dock"].play()
+        #print("  Number docked=",self.numDocked)
         # Are we full?
         if(self.numDocked==4):
             # Yes
@@ -553,10 +572,12 @@ class Wheel(pygame.sprite.Sprite):
         return self.validExit[point]
     
     def undock(self, point):
-        # Ball has been launched, drop reference to it
-        self.docked[point]=None
-        self.image=self.imageGen()
-        self.numDocked-=1
+        # Ball has been launched or exploded, drop reference to it
+        # The slot might be none if the first of two balls has already exploded
+        if(self.docked[point]!=None):
+            self.docked[point]=None
+            self.image=self.imageGen()
+            self.numDocked-=1
 
     def setInvalid(self, point):
         # Mark an exit point as invalid
@@ -1246,6 +1267,7 @@ def playLevel():
             elif event.key == pygame.K_p:
                 pButton.pause()
         elif event.type == pygame.MOUSEBUTTONDOWN:
+            #print("CLICK")
             # Button 3, right click. Did we click a wheel?
             if(event.button==3):
                 #print("Right click")
@@ -1254,10 +1276,17 @@ def playLevel():
             elif(event.button==1):
                 # Left click, did we click a ball?
                 # print("Left click")
+                handled=False
                 for s in all_sprites:
                     if(type(s).__name__=="Ball"):
-                        s.handleEvent(event)
-                pButton.handleEvent(event) 
+                        handled=s.handleEvent(event)
+                        if(handled):
+                            break;
+                # For debugging wheels, comment out
+                # if(not handled):
+                #     for w in wheels:
+                #         wheels[w].handleEvent(event)
+            pButton.handleEvent(event) 
         # else:
         #     print("Unknown event", event.type)
         #     print(event)

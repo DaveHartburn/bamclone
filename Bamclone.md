@@ -102,7 +102,7 @@ To Do
 - [X] Painter blocks
 - [X] Barrier blocks
 - [X] Sound effects
-- [ ] More levels
+- [X] More levels
 - [ ] Score
 - [X] Lobby screen
 - [X] Progression
@@ -115,8 +115,8 @@ To Do
 Bugs
 ----
 - Balls don't quit sit snug when docking, until rotated
-- In testing one wheel didn't blow. Suspect a ball dropped as I turned that wheel and it became a 'ghost' somewhere
-  - Or could be down to exploded balls not clearing the wheel
+
 
 Check in notes
 --------------
+- Fixed ball collision/wheel not blowing bug

@@ -31,6 +31,9 @@ Other tiles are coloured painter blocks. Any ball passing through this block wil
 
 Version
 -------
+0.5
+* All 49 original levels added
+* Fixed wheel collision bug
 0.4
 * Can now play through a series of levels
 * Sound added

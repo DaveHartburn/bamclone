@@ -110,13 +110,14 @@ To Do
 - [ ] Different tile colours/textures
 - [ ] Level intro message
 - [X] Level/game over message
-- [ ] Difficulty
+- [X] Difficulty
 
 Bugs
 ----
 - Balls don't quit sit snug when docking, until rotated
 
-
 Check in notes
 --------------
-- Fixed ball collision/wheel not blowing bug
+- Can select difficulty and set custom difficulty levels
+- Can toggle a level timer over the timebar with bool showSeconds in code or in game with 't'
+- Fixed level selection list and allow wrap around

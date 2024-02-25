@@ -22,16 +22,25 @@ BALLSIZE=math.floor(PWIDTH*0.7)
 TOPMARG=WINMARG//2       # Use a smaller margin, screen down will go TOPMARG, TOPBAR, TOPMARG
 TOPBAR=BALLSIZE+8       # Allow display for a ball, and a border
 
+# Parameters for difficulty settints
+diffParam = {
+    "Easy": {"ballspeed":2, "FPS":120, "levelTime":200},   # Same speed, more time
+    "Normal": {"ballspeed":2, "FPS":120, "levelTime":130},
+    "Hard": {"ballspeed":3, "FPS":120, "levelTime":90}
+}
+difficulty="Normal"         # This will error if the difficulty does not match the above
+showSeconds = True          # Set to false to not display the seconds on the countdown timer
+
 # Ball speed, rot steps and FPS control how fast the game flows. If you make the tiles smaller, you may
 # want to drop FPS or slow down the ball, as it will still cover the same amount of pixels as a larger tile
-BALLSPEED=2             # Number of pixels to move per cycle
+BALLSPEED=diffParam[difficulty]["ballspeed"]            # Number of pixels to move per cycle
 ROTSTEPS=10             # Number of steps to rotate the wheel in
-FPS = 120               # Game frames per second
+FPS = diffParam[difficulty]["FPS"]              # Game frames per second
 EXPTIME = 200           # ms for the explosion to appear and the ball finally die
 BALL_LIMIT = -1          # -1 for infinite balls. May set a limit for testing or an extra challenge
 ballCount = 0           # Track the number of balls released
 
-LEVEL_TIME = 130         # Default number of seconds for the level
+LEVEL_TIME = diffParam[difficulty]["levelTime"]        # Default number of seconds for the level
 LEVEL_LIST_FILE = os.path.join("levels", "levelList")
 
 # Explosion details
@@ -52,7 +61,8 @@ THEME = {
     "main":(184, 115, 51),
     "dark":(81, 59, 28),
     "light":(230, 191, 131),
-    "font":(236, 229, 182)
+    "font":(236, 229, 182),
+    "time":(200,220,200)
 }
 
 fontName='freesansbold'    # This should be a generic font on all systems
@@ -113,7 +123,7 @@ else:
             levelList.append(os.path.join("levels", l.rstrip('\n')))
             maxLevels+=1
     #print(levelList)
-
+print("Number of levels = ", maxLevels)
 
 
 # Start pygame
@@ -789,7 +799,14 @@ def drawGameScreen():
     screen.blit(timerBar, (WINMARG, WINMARG/2))
     # Mask out the elapsed time
     pygame.draw.rect(screen,BG,ts["timerMask"])
-
+    if(showSeconds):
+        # Display the remaining time on the timer bar as text
+        t=math.ceil(ts["timeLeft"]/1000)
+        #print(t)
+        tsurf=fonts["time"].render(str(t),True, THEME["time"])
+        trect=tsurf.get_rect()
+        marg=TOPBAR/5
+        screen.blit(tsurf, (WINMARG+marg*2,WINMARG/2+marg*1.5))
     # Do we display the infoPanel?
     if(showInfoPan):
         screen.blit(infPan.image, infPan.rect)
@@ -801,6 +818,7 @@ def drawLobbyScreen():
     global lobScreen
     screen.blit(lobScreen["main"],(0,0))
     screen.blit(lobScreen["levelSel"], lobScreen["levelSel_rect"])
+    screen.blit(lobScreen["diffSel"], lobScreen["diffSel_rect"])
     pygame.display.flip()
 
 def genWheelImage():
@@ -1128,15 +1146,18 @@ def lobby():
                     # Left, increase
                     curLevel+=1
                     if(curLevel>=maxLevels-1):
-                        curLevel=maxLevels-1
+                        curLevel=0
                 if(event.button==3):
                     # Right button clicked
                     curLevel-=1
                     if(curLevel<0):
-                        curLevel=0
+                        curLevel=maxLevels-1
                 # Regenerate icon
                 (lobScreen["levelSel"],junkVar)=genLevelSel(bxmarg, bymarg, brad)
-
+            elif(lobScreen["diffSel_rect"].collidepoint(event.pos)):
+                changeDifficulty(event.button)
+                (lobScreen["diffSel"],lobScreen["diffSel_rect"])=genDiffSel(bxmarg, bymarg, brad)
+                lobScreen["diffSel_rect"].center=(WIDTH/2,HEIGHT-WINMARG-575)
         drawLobbyScreen()
     # What did we exit with
     if(leaveLobby==2):
@@ -1162,7 +1183,7 @@ def genLobbyScreen():
     # Start game button
     ssurf=outlineText("Start game",fonts["infop_m"],THEME["font"], THEME["dark"], 4)
     srect=ssurf.get_rect()
-    srect.center=(WIDTH/2,HEIGHT-WINMARG-300)
+    srect.center=(WIDTH/2,HEIGHT-WINMARG-275)
     msurf.blit(ssurf,srect)
     # Add an outline
     srect=srect.inflate(bxmarg, bymarg)
@@ -1172,16 +1193,22 @@ def genLobbyScreen():
     # Make quit button
     qsurf=outlineText("Quit",fonts["infop_m"],THEME["font"], THEME["dark"], 4)
     qrect=qsurf.get_rect()
-    qrect.center=(WIDTH/2,HEIGHT-WINMARG-150)
+    qrect.center=(WIDTH/2,HEIGHT-WINMARG-125)
     msurf.blit(qsurf,qrect)
     # Add an outline
     qrect=qrect.inflate(bxmarg, bymarg)
     pygame.draw.rect(msurf, THEME["dark"], qrect, 4, border_radius=brad)
     lobStruct["quit_rect"]=qrect
 
+    # Add the level select button
     (lobStruct["levelSel"],lobStruct["levelSel_rect"])=genLevelSel(bxmarg, bymarg, brad)
-    lobStruct["levelSel_rect"].center=(WIDTH/2,HEIGHT-WINMARG-450)
+    lobStruct["levelSel_rect"].center=(WIDTH/2,HEIGHT-WINMARG-425)
     #print(lobStruct["levelSel_rect"])
+
+    # Add the difficulty select button
+    (lobStruct["diffSel"],lobStruct["diffSel_rect"])=genDiffSel(bxmarg, bymarg, brad)
+    lobStruct["diffSel_rect"].center=(WIDTH/2,HEIGHT-WINMARG-575)
+
     return lobStruct
 # End of genLobbyScreenS
 
@@ -1209,7 +1236,55 @@ def genLevelSel(bxmarg, bymarg, brad):
     return (lsurf, lrect)
 # End of genLevelSel
 
+def genDiffSel(bxmarg, bymarg, brad):
+    # Generate a difficulty select button. Dynamic, will change according to the selected difficulty level
+    global diffParam, difficulty
+
+    # Button surface
+    btext=difficulty
+    ssurf=outlineText(btext,fonts["infop_m"],THEME["font"], THEME["dark"], 4)
+    srect=ssurf.get_rect()
+    #srect.center=((bxmarg+srect.width/2), (bymarg+srect.height)/2)
+
+    # Add an outline
+    srectbor=srect.inflate(bxmarg, bymarg)
+    srectbor.center=(srectbor.width/2, srectbor.height/2)
+
+    # Make surfae to paste it all to
+    lsurf=pygame.Surface((srectbor.width, srectbor.height))
+    lsurf.fill(THEME["main"])
+    srect.center=(srectbor.width/2, srectbor.height/2)
+    lsurf.blit(ssurf, srect)
+    pygame.draw.rect(lsurf, THEME["dark"], srectbor, 4, border_radius=brad)   
+    lrect=lsurf.get_rect()
+    lrect.centery=(HEIGHT-WINMARG-300)
+    return (lsurf, lrect)
+# End of genDiffSel
     
+def changeDifficulty(d):
+    # Changes the difficulty level, up if the left button is clicked (d=1) or down if right (d=3)
+    global difficulty, diffParam, BALLSPEED, FPS, LEVEL_TIME
+    l=len(diffParam)
+    k=list(diffParam.keys())
+    # Find position of current key
+    for i in range(l):
+        if(k[i]==difficulty):
+            p=i
+    if(d==1):
+        p=p+1
+    if(d==3):
+        p=p-1
+
+    if(p>=l):
+        p=0
+    elif(p<0):
+        p=l-1
+    difficulty=k[p]
+    BALLSPEED=diffParam[difficulty]["ballspeed"]            # Number of pixels to move per cycle
+    FPS = diffParam[difficulty]["FPS"]              # Game frames per second
+    LEVEL_TIME = diffParam[difficulty]["levelTime"]        # Default number of seconds for the level
+# End of changeDifficulty
+
 # Explode test
 def explodeTest():
     # Test explode function, explode all balls, except the one in the top ally
@@ -1220,7 +1295,7 @@ def explodeTest():
 
 def playLevel():
     # Main loop controlling playing an individual level
-    global curLevel, levelList, all_sprites, ts, showInfoPan, BLOWN_WHEELS, NUM_WHEELS
+    global curLevel, levelList, all_sprites, ts, showInfoPan, BLOWN_WHEELS, NUM_WHEELS, LEVEL_TIME, showSeconds
     levelFile=levelList[curLevel]
     loadLevel(levelFile)
 
@@ -1235,6 +1310,7 @@ def playLevel():
     aTimer=-1          # Used for various timer purposes
 
     # Start the level timer
+    ts["levelTime"]=LEVEL_TIME*1000
     ts["startTime"]=pygame.time.get_ticks()
     ts["endTime"]=ts["startTime"]+ts["levelTime"]
 
@@ -1266,6 +1342,8 @@ def playLevel():
                 gameState=2
             elif event.key == pygame.K_p:
                 pButton.pause()
+            elif event.key == pygame.K_t:
+                showSeconds=not showSeconds
         elif event.type == pygame.MOUSEBUTTONDOWN:
             #print("CLICK")
             # Button 3, right click. Did we click a wheel?
@@ -1344,7 +1422,8 @@ def playLevel():
 # Load fonts
 fonts={
     "infop":pygame.font.SysFont(fontName, 128),
-    "infop_m":pygame.font.SysFont(fontName, 96)
+    "infop_m":pygame.font.SysFont(fontName, 96),
+    "time":pygame.font.SysFont(fontName, int(TOPBAR*0.66)),
 }
 
 # Generate images

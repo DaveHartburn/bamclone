@@ -29,8 +29,19 @@ Some tiles contain a coloured barrier. Only balls of that colour may pass the ba
 
 Other tiles are coloured painter blocks. Any ball passing through this block will be painted to the new colour.
 
+The score for each level is calculated as follows:
+ * 100 points for clearing with the minimum number of balls
+   * This bonus drops by 1 point for every additional ball used
+ * Plus the number of seconds
+ * The total score is then given a difficulty multiplier and rounded up
+   * Zero for Easy
+   * +15% for Normal
+   * +30% for Hard
+
 Version
 -------
+1.0
+* Fully functional game
 0.5
 * All 49 original levels added
 * Fixed wheel collision bug

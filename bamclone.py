@@ -25,8 +25,8 @@ TOPBAR=BALLSIZE+8       # Allow display for a ball, and a border
 # Parameters for difficulty settints
 diffParam = {
     "Easy": {"ballspeed":2, "FPS":120, "levelTime":200},   # Same speed, more time
-    "Normal": {"ballspeed":2, "FPS":120, "levelTime":130},
-    "Hard": {"ballspeed":3, "FPS":120, "levelTime":90}
+    "Normal": {"ballspeed":2, "FPS":120, "levelTime":150},
+    "Hard": {"ballspeed":3, "FPS":120, "levelTime":110}
 }
 difficulty="Normal"         # This will error if the difficulty does not match the above
 showSeconds = True          # Set to false to not display the seconds on the countdown timer
@@ -39,6 +39,7 @@ FPS = diffParam[difficulty]["FPS"]              # Game frames per second
 EXPTIME = 200           # ms for the explosion to appear and the ball finally die
 BALL_LIMIT = -1          # -1 for infinite balls. May set a limit for testing or an extra challenge
 ballCount = 0           # Track the number of balls released
+SCORE = 0
 
 LEVEL_TIME = diffParam[difficulty]["levelTime"]        # Default number of seconds for the level
 LEVEL_LIST_FILE = os.path.join("levels", "levelList")
@@ -1296,6 +1297,8 @@ def explodeTest():
 def playLevel():
     # Main loop controlling playing an individual level
     global curLevel, levelList, all_sprites, ts, showInfoPan, BLOWN_WHEELS, NUM_WHEELS, LEVEL_TIME, showSeconds
+    global ballCount, SCORE
+
     levelFile=levelList[curLevel]
     loadLevel(levelFile)
 
@@ -1394,13 +1397,34 @@ def playLevel():
         # Increase the level counter
         curLevel+=1
 
+        # Calculate score
+        ballScore=100-(ballCount-NUM_WHEELS*4)
+        if(ballScore<0):
+            ballScore=0
+        #print("Ball score=", ballScore)
+        timeScore=int(ts["timeLeft"]/1000)
+        #print("Time score=", timeScore)
+        baseScore=ballScore+timeScore
+        #print("Base score=", baseScore)
+
+        # Find difficulty multiplier
+        k=list(diffParam.keys())
+        for i in range(len(k)):
+            if(k[i]==difficulty):
+                p=i
+        dm=math.ceil(1*p*0.15)
+        #print("Difficulty multiplier=", dm)
+        levelScore=baseScore*dm
+        #print("Level score=", levelScore)
+        SCORE+=levelScore
+
         # Have we played all levels?
         if(curLevel>=maxLevels):
             print("Game complete")
-            infPan.setMsg("Game complete, score=9999")
+            infPan.setMsg("Game complete, score={}".format(SCORE))
         else:
             print("  Success!!!")
-            infPan.setMsg("Success, score=9999")
+            infPan.setMsg("Success, score={}".format(SCORE))
             moreLevels=True # Keep playing
         showInfoPan=True
         drawGameScreen()
@@ -1408,7 +1432,7 @@ def playLevel():
         pygame.time.delay(3000)
         showInfoPan=False
     elif(gameState==2):
-        infPan.setMsg("Out of time, score=9999")
+        infPan.setMsg("Out of time, score={}".format(SCORE))
         showInfoPan=True
         drawGameScreen()
         sounds["fail"].play()
@@ -1451,7 +1475,11 @@ while True:
         all_sprites = pygame.sprite.Group()
         BLOWN_WHEELS=0
         NUM_WHEELS=0
+        ballCount = 0
         gameRunning=playLevel()
+
+    # Level may have changed, regenerate the icon
+    lobScreen=genLobbyScreen()
 
 # End of main loop
 

@@ -103,7 +103,7 @@ To Do
 - [X] Barrier blocks
 - [X] Sound effects
 - [X] More levels
-- [ ] Score
+- [X] Score
 - [X] Lobby screen
 - [X] Progression
 - [X] Game pause (on screen button)
@@ -118,6 +118,4 @@ Bugs
 
 Check in notes
 --------------
-- Can select difficulty and set custom difficulty levels
-- Can toggle a level timer over the timebar with bool showSeconds in code or in game with 't'
-- Fixed level selection list and allow wrap around
+- Game scoring implemented
